@@ -1,87 +1,87 @@
 # 🤖 LocalBot
 
-Asistente personal inteligente que corre localmente usando [Ollama](https://ollama.ai). Disponible como bot de Telegram y como interface TUI.
+A smart personal assistant that runs locally using [Ollama](https://ollama.ai). Available as a Telegram bot and TUI interface.
 
-## ✨ Características
+## ✨ Features
 
-- 💬 **Chat con LLM local** - Sin dependencias de APIs externas
-- 🎙️ **Transcripción de audio** - Convierte mensajes de voz a texto con Whisper
-- 🎥 **Resúmenes de YouTube** - Envía un link y recibe un resumen
-- 🔍 **Búsqueda web** - Integración con Brave Search
-- ⏰ **Recordatorios** - Programa tareas con cron que te notifican en el chat
-- 🧠 **Memoria persistente** - El bot recuerda información sobre vos
+- 💬 **Local LLM chat** - No external API dependencies
+- 🎙️ **Audio transcription** - Convert voice messages to text with Whisper
+- 🎥 **YouTube summaries** - Send a link and get a summary
+- 🔍 **Web search** - Brave Search integration
+- ⏰ **Reminders** - Schedule cron tasks that notify you in chat
+- 🧠 **Persistent memory** - The bot remembers information about you
 
-## 📁 Estructura
+## 📁 Structure
 
 ```
 LocalBot/
-├── config.yaml          # Configuración principal
-├── .env                 # Variables de entorno (tokens)
-├── requirements.txt     # Dependencias Python
-├── cargarentorno.sh     # Script de instalación
-├── run.sh               # Script para ejecutar
+├── config.yaml          # Main configuration
+├── .env                 # Environment variables (tokens)
+├── requirements.txt     # Python dependencies
+├── cargarentorno.sh     # Installation script
+├── run.sh               # Run script
 │
-├── src/                 # Código fuente
-│   ├── telegram_bot.py  # Bot de Telegram
-│   ├── tui.py           # Interface TUI
-│   └── client.py        # Cliente Ollama
+├── src/                 # Source code
+│   ├── telegram_bot.py  # Telegram bot
+│   ├── tui.py           # TUI interface
+│   └── client.py        # Ollama client
 │
-├── utils/               # Módulos utilitarios
-│   ├── audio_utils.py   # Transcripción Whisper
-│   ├── youtube_utils.py # Descargar audio de YT
-│   ├── search_utils.py  # Búsqueda Brave
-│   └── cron_utils.py    # Gestión de crontab
+├── utils/               # Utility modules
+│   ├── audio_utils.py   # Whisper transcription
+│   ├── youtube_utils.py # Download YT audio
+│   ├── search_utils.py  # Brave search
+│   └── cron_utils.py    # Crontab management
 │
-├── data/                # Archivos de datos
-│   ├── instructions.md  # Instrucciones del LLM
-│   ├── memory.md        # Memoria del usuario
-│   └── events.txt       # Cola de notificaciones
+├── data/                # Data files
+│   ├── instructions.md  # LLM instructions
+│   ├── memory.md        # User memory
+│   └── events.txt       # Notification queue
 │
-└── assets/              # Recursos
-    └── styles.tcss      # Estilos TUI
+└── assets/              # Resources
+    └── styles.tcss      # TUI styles
 ```
 
-## 🚀 Instalación
+## 🚀 Installation
 
-### Requisitos
+### Requirements
 - Python 3.12+
-- [Ollama](https://ollama.ai) instalado y corriendo
-- FFmpeg (para transcripción de audio)
+- [Ollama](https://ollama.ai) installed and running
+- FFmpeg (for audio transcription)
 
-### Pasos
+### Steps
 
-1. **Clonar el repositorio:**
+1. **Clone the repository:**
 ```bash
-git clone https://github.com/tu-usuario/LocalBot.git
+git clone https://github.com/your-username/LocalBot.git
 cd LocalBot
 ```
 
-2. **Configurar entorno:**
+2. **Set up environment:**
 ```bash
 chmod +x cargarentorno.sh
 ./cargarentorno.sh
 ```
 
-3. **Configurar variables de entorno:**
+3. **Configure environment variables:**
 ```bash
 cp .env.example .env
-# Editar .env con tus tokens
+# Edit .env with your tokens
 ```
 
-4. **Descargar modelo de Ollama:**
+4. **Download Ollama model:**
 ```bash
 ollama pull glm-4.7-flash:q8_0
-# O el modelo que prefieras
+# Or your preferred model
 ```
 
-## ⚙️ Configuración
+## ⚙️ Configuration
 
 ### `.env`
 ```env
-TELEGRAM_TOKEN=tu_token_de_botfather
-AUTHORIZED_USERS=123456789  # Tu ID de Telegram
+TELEGRAM_TOKEN=your_botfather_token
+AUTHORIZED_USERS=123456789  # Your Telegram ID
 NOTIFICATION_CHAT_ID=123456789
-BRAVE_API_KEY=tu_api_key  # Opcional, para búsquedas
+BRAVE_API_KEY=your_api_key  # Optional, for searches
 ```
 
 ### `config.yaml`
@@ -94,65 +94,70 @@ WHISPER_MODEL_EXTERNAL: "medium"
 INACTIVITY_TIMEOUT_MINUTES: 5
 ```
 
-## 🎮 Uso
+## 🎮 Usage
 
-### Bot de Telegram
+### Telegram Bot
 ```bash
 ./run.sh
-# o
+# or
 source venv_bot/bin/activate
 python src/telegram_bot.py
 ```
 
-### Interface TUI
+### TUI Interface
 ```bash
 source venv_bot/bin/activate
 python src/main.py
 ```
 
-## 📱 Comandos de Telegram
+## 📱 Telegram Commands
 
-| Comando | Descripción |
+| Command | Description |
 |---------|-------------|
-| `/start` | Iniciar conversación |
-| `/new` | Nueva conversación (limpia historial) |
-| `/status` | Ver uso de contexto y tokens |
+| `/start` | Start conversation |
+| `/new` | New conversation (clears history) |
+| `/status` | View context and token usage |
 
-## 🎤 Funciones Especiales
+## 🎤 Special Features
 
-### Transcripción de Audio
-- Envía un mensaje de voz → Se transcribe y responde
-- Envía un archivo de audio → Solo transcripción (modelo más grande)
+### Audio Transcription
+- Send a voice message → Transcribed and answered
+- Send an audio file → Transcription only (larger model)
 
-### Resumen de YouTube
-- Envía un link de YouTube → El bot descarga, transcribe y resume
+### YouTube Summary
+- Send a YouTube link → Bot downloads, transcribes and summarizes
 
-### Recordatorios
-Pedile al bot cosas como:
-- "Recordame tomar agua cada hora"
-- "Avisame mañana a las 9am que tengo reunión"
+### Reminders
+Ask the bot things like:
+- "Remind me to drink water every hour"
+- "Notify me tomorrow at 9am about my meeting"
 
-### Memoria
-El bot puede recordar información sobre vos:
-- Edita `data/memory.md` con tus datos
-- O simplemente contale cosas y las recordará automáticamente
+### Memory
+The bot can remember information about you:
+- Edit `data/memory.md` with your data
+- Or just tell it things and it will remember automatically
 
-## 🔧 Desarrollo
+## 🔧 Development
 
-### Agregar nuevas funcionalidades
-1. Crea el módulo en `utils/`
-2. Importalo en `src/telegram_bot.py`
-3. Agrega instrucciones en `data/instructions.md`
+### Adding new features
+1. Create the module in `utils/`
+2. Import it in `src/telegram_bot.py`
+3. Add instructions in `data/instructions.md`
 
-### Cambiar modelo
-Edita `config.yaml`:
-```yaml
-MODEL: "tu-modelo:tag"
-```
+### Changing model
+Edit `config.yaml`:
+MODEL: "your-model:tag"
 
-## 📄 Licencia
+## 📄 License
 
-MIT License - Usa, modifica y comparte libremente.
+MIT License 
+Copyright 2026 Rocopolas
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---
 
