@@ -2,3 +2,5 @@
 /.venv
 /__pycache__
 /venv_bot
+/utils/__pycache__
+/src/__pycache__
