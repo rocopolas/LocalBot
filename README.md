@@ -9,6 +9,7 @@ A smart personal assistant that runs locally using [Ollama](https://ollama.ai). 
 - 🎙️ **Audio transcription** - Convert voice messages to text with Whisper
 - 🎥 **YouTube summaries** - Send a link and get a summary
 - 🔍 **Web search** - Brave Search integration
+- 📄 **Document reading** - Analyze and chat with PDF or text files
 - ⏰ **Reminders** - Schedule cron tasks that notify you in chat
 - 🧠 **Persistent memory** - The bot remembers information about you
 
@@ -133,6 +134,10 @@ python src/main.py
 
 ### YouTube Summary
 - Send a YouTube link → Bot downloads, transcribes and summarizes
+
+### Document Reading
+- Send a PDF, DOCX, or TXT file → Bot extracts text and responds
+- Send document + caption → Bot considers both for response
 
 ### Reminders
 Ask the bot things like:

@@ -43,3 +43,5 @@ tzlocal==5.3.1
 uc-micro-py==1.0.3
 yt-dlp==2023.11.16
 pyyaml
+pymupdf
+python-docx

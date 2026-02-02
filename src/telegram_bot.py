@@ -18,6 +18,7 @@ from utils.cron_utils import CronUtils
 from utils.search_utils import BraveSearch
 from utils.audio_utils import transcribe_audio, transcribe_audio_large, is_whisper_available
 from utils.youtube_utils import is_youtube_url, download_youtube_audio, get_video_title
+from utils.document_utils import extract_text_from_document, is_supported_document
 from utils.config_loader import get_config
 
 # Load environment variables
@@ -419,6 +420,110 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await status_msg.edit_text(f"❌ Error: {str(e)}")
 
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles documents (PDF, DOCX, TXT) by extracting text and processing with LLM."""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    # Authorization check
+    if not is_authorized(user_id):
+        await update.message.reply_text(f"⛔ No tienes acceso a este bot.\nTu ID es: `{user_id}`", parse_mode="Markdown")
+        return
+    
+    document = update.message.document
+    file_name = document.file_name or "documento"
+    
+    # Check if it's a supported document type
+    if not is_supported_document(file_name):
+        # Ignore unsupported files silently (could be stickers, etc)
+        return
+    
+    status_msg = await update.message.reply_text(f"📄 Leyendo *{file_name}*...", parse_mode="Markdown")
+    
+    try:
+        # Download document
+        doc_file = await context.bot.get_file(document.file_id)
+        
+        # Determine extension for temp file
+        ext = os.path.splitext(file_name)[1] or ".tmp"
+        
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            await doc_file.download_to_drive(tmp.name)
+            tmp_path = tmp.name
+        
+        # Extract text
+        doc_text, doc_type = extract_text_from_document(tmp_path, file_name)
+        
+        # Clean up temp file
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+        
+        # Check if extraction failed
+        if doc_text.startswith("[Error"):
+            await status_msg.edit_text(doc_text)
+            return
+        
+        # Truncate if too long (keep first ~50k chars)
+        if len(doc_text) > 50000:
+            doc_text = doc_text[:50000] + "\n\n[... documento truncado por longitud ...]"
+        
+        await status_msg.edit_text(f"💭 Procesando documento {doc_type}...")
+        
+        # Initialize chat history if needed
+        if chat_id not in chat_histories:
+            chat_histories[chat_id] = []
+            system_prompt = get_system_prompt()
+            if system_prompt:
+                chat_histories[chat_id].append({"role": "system", "content": system_prompt})
+        
+        # Build context message
+        caption = update.message.caption
+        if caption:
+            context_message = f"[El usuario envió un documento {doc_type} llamado '{file_name}' con el mensaje: '{caption}']\n\nContenido del documento:\n{doc_text}\n\nResponde considerando el documento y el mensaje del usuario."
+        else:
+            context_message = f"[El usuario envió un documento {doc_type} llamado '{file_name}']\n\nContenido del documento:\n{doc_text}\n\nResume o comenta sobre el contenido del documento."
+        
+        # Add to history
+        chat_histories[chat_id].append({"role": "user", "content": context_message})
+        
+        # Generate response
+        client = OllamaClient()
+        full_response = ""
+        async for chunk in client.stream_chat(MODEL, chat_histories[chat_id]):
+            full_response += chunk
+        
+        # Format response and strip commands
+        formatted_response = full_response.replace("<think>", "> 🧠 **Pensando:**\n> ").replace("</think>", "\n\n")
+        formatted_response = re.sub(r'\x1b\[[0-9;]*m', '', formatted_response)
+        formatted_response = re.sub(r':::memory\s+.+?:::', '', formatted_response, flags=re.DOTALL)
+        formatted_response = formatted_response.strip()
+        
+        try:
+            await status_msg.edit_text(formatted_response, parse_mode="Markdown")
+        except Exception:
+            await status_msg.edit_text(formatted_response)
+        
+        # Add to history
+        chat_histories[chat_id].append({"role": "assistant", "content": full_response})
+        
+        # Parse memory commands
+        for memory_match in re.finditer(r":::memory\s+(.+?):::", full_response, re.DOTALL):
+            memory_content = memory_match.group(1).strip()
+            if memory_content:
+                try:
+                    memory_path = os.path.join(PROJECT_ROOT, get_config("MEMORY_FILE"))
+                    with open(memory_path, "a", encoding="utf-8") as f:
+                        f.write(f"\n- {memory_content}")
+                    load_memory()
+                    await context.bot.send_message(chat_id, f"💾 Guardado en memoria: _{memory_content}_", parse_mode="Markdown")
+                except Exception as e:
+                    await context.bot.send_message(chat_id, f"⚠️ Error guardando memoria: {str(e)}")
+        
+    except Exception as e:
+        await status_msg.edit_text(f"❌ Error: {str(e)}")
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Queues incoming messages for sequential processing."""
     user_id = update.effective_user.id
@@ -749,6 +854,7 @@ if __name__ == '__main__':
     voice_handler = MessageHandler(filters.VOICE, handle_voice)
     audio_handler = MessageHandler(filters.AUDIO, handle_audio)
     photo_handler = MessageHandler(filters.PHOTO, handle_photo)
+    document_handler = MessageHandler(filters.Document.ALL, handle_document)
     
     application.add_handler(start_handler)
     application.add_handler(new_handler)
@@ -758,6 +864,7 @@ if __name__ == '__main__':
     application.add_handler(voice_handler)
     application.add_handler(audio_handler)
     application.add_handler(photo_handler)
+    application.add_handler(document_handler)
     
     # Check events every 2 seconds
     if application.job_queue:
