@@ -1,0 +1,8 @@
+dormir:
+- action: apagar
+  light: luz_solitaria
+- action: apagar
+  light: luz_cama
+- action: brillo
+  light: luz_esquina
+  value: 10

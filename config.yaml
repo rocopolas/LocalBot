@@ -7,7 +7,7 @@ CONTEXT_LIMIT: 200000
 WHISPER_LANGUAGE: "es"
 WHISPER_MODEL_VOICE: "turbo"
 WHISPER_MODEL_EXTERNAL: "turbo"
-INACTIVITY_TIMEOUT_MINUTES: 5
+INACTIVITY_TIMEOUT_MINUTES: 60
 CRON_CLEANUP_INTERVAL_MINUTES: 30
 TIMEZONE_OFFSET_HOURS: -3  
 EVENTS_FILE: "data/events.txt"
@@ -16,10 +16,13 @@ MEMORY_FILE: "data/memory.md"
 
 # Luces WIZ (nombre: IP o lista de IPs)
 WIZ_LIGHTS:
-  pieza:
+  # Luces individuales
+  luz_esquina: "192.168.0.121"
+  luz_solitaria: "192.168.0.63"
+  luz_cama: "192.168.0.115"
+  
+  pieza: 
     - "192.168.0.121"
     - "192.168.0.63"
     - "192.168.0.115"
-
-
 

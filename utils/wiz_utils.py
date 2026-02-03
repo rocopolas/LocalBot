@@ -171,3 +171,106 @@ async def control_light(name: str, action: str, value: str = None) -> str:
     
     return f"⚠️ Acción no reconocida: {action}"
 
+import yaml
+import os
+
+PRESETS_FILE = "data/presets.yaml"
+
+def load_presets() -> dict:
+    """Load presets from YAML file."""
+    if not os.path.exists(PRESETS_FILE):
+        return {}
+    try:
+        with open(PRESETS_FILE, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f) or {}
+    except Exception as e:
+        print(f"[WIZ] Error loading presets: {e}")
+        return {}
+
+def save_presets(presets: dict) -> bool:
+    """Save presets to YAML file."""
+    try:
+        with open(PRESETS_FILE, 'w', encoding='utf-8') as f:
+            yaml.dump(presets, f, default_flow_style=False, allow_unicode=True)
+        return True
+    except Exception as e:
+        print(f"[WIZ] Error saving presets: {e}")
+        return False
+
+def add_preset(name: str, steps: list) -> str:
+    """Add or update a preset."""
+    presets = load_presets()
+    presets[name.lower()] = steps
+    if save_presets(presets):
+        return f"✅ Modo '{name}' guardado correctamente."
+    return "❌ Error guardando el modo."
+
+def delete_preset(name: str) -> str:
+    """Delete a preset."""
+    presets = load_presets()
+    if name.lower() not in presets:
+        return f"⚠️ Modo '{name}' no existe."
+    
+    del presets[name.lower()]
+    if save_presets(presets):
+        return f"🗑️ Modo '{name}' eliminado."
+    return "❌ Error eliminando el modo."
+
+def list_presets() -> str:
+    """List available presets."""
+    presets = load_presets()
+    if not presets:
+        return "No hay modos guardados."
+    return "Modos disponibles: " + ", ".join(presets.keys())
+
+async def apply_preset(preset_name: str) -> str:
+    """Apply a lighting preset/scene defined in presets.yaml."""
+    presets = load_presets()
+    if not presets:
+        return "⚠️ No hay modos configurados en data/presets.yaml"
+    
+    scene = presets.get(preset_name.lower())
+    if not scene:
+        available = ", ".join(presets.keys())
+        return f"⚠️ Modo '{preset_name}' no encontrado. Disponibles: {available}"
+    
+    results = []
+    
+    # Apply each command in the scene
+    for command in scene:
+        light_name = command.get("light")
+        action = command.get("action", "encender")
+        brightness = command.get("brightness")
+        color = command.get("color")
+        
+        # Determine value for control_light
+        # Support both specific keys and generic 'value'
+        cmd_value = command.get("value")
+        
+        value = None
+        if action == "brillo":
+            value = cmd_value if cmd_value is not None else brightness
+        elif action == "color":
+            value = cmd_value if cmd_value is not None else color
+        
+        if action == "encender":
+            ips = get_light_ips(light_name)
+            for ip in ips:
+                res = await turn_on_light(ip, brightness=brightness or 100, color=color)
+                results.append(res)
+        
+        elif action == "apagar":
+            ips = get_light_ips(light_name)
+            for ip in ips:
+                res = await turn_off_light(ip)
+                results.append(res)
+        else:
+            # Generic fallback
+            await control_light(light_name, action, value)
+            results.append(True)
+            
+    if all(results):
+        return f"✨ Modo '{preset_name}' activado"
+    else:
+        return f"⚠️ Modo '{preset_name}' activado con errores"
+

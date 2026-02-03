@@ -20,7 +20,7 @@ from utils.audio_utils import transcribe_audio, transcribe_audio_large, is_whisp
 from utils.youtube_utils import is_youtube_url, download_youtube_audio, get_video_title
 from utils.document_utils import extract_text_from_document, is_supported_document
 from utils.email_utils import is_gmail_configured, fetch_emails_last_24h, format_emails_for_llm
-from utils.wiz_utils import control_light, is_wiz_available
+from utils.wiz_utils import control_light, is_wiz_available, apply_preset, add_preset, delete_preset, list_presets
 from utils.config_loader import get_config
 
 # Load environment variables
@@ -683,6 +683,9 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             async for chunk in client.stream_chat(MODEL, chat_histories[chat_id]):
                 final_response += chunk
             
+            # CRITICAL: Update full_response so command parsers see the new text
+            full_response = final_response
+            
             # Format the final response (no search command visible)
             final_formatted = final_response.replace("<think>", "> 🧠 **Pensando:**\n> ").replace("</think>", "\n\n")
             final_formatted = re.sub(r'\x1b\[[0-9;]*m', '', final_formatted)
@@ -693,6 +696,11 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             final_formatted = re.sub(r':::cron_delete\s+.+?:::', '', final_formatted)
             final_formatted = re.sub(r':::cron\s+.+?:::', '', final_formatted)
             final_formatted = re.sub(r':::luz\s+.+?:::', '', final_formatted)
+            final_formatted = re.sub(r':::camara(?:\s+\S+)?:::', '', final_formatted)
+            final_formatted = re.sub(r':::modo\s+.+?:::', '', final_formatted)
+            final_formatted = re.sub(r':::modo_guardar\s+.+?:::', '', final_formatted, flags=re.DOTALL)
+            final_formatted = re.sub(r':::modo_borrar\s+.+?:::', '', final_formatted)
+            final_formatted = re.sub(r':::modo_listar:::', '', final_formatted)
             final_formatted = final_formatted.strip()
             
             try:
@@ -713,6 +721,11 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             formatted_response = re.sub(r':::cron_delete\s+.+?:::', '', formatted_response)
             formatted_response = re.sub(r':::cron\s+.+?:::', '', formatted_response)
             formatted_response = re.sub(r':::luz\s+.+?:::', '', formatted_response)
+            formatted_response = re.sub(r':::camara(?:\s+\S+)?:::', '', formatted_response)
+            formatted_response = re.sub(r':::modo\s+.+?:::', '', formatted_response)
+            formatted_response = re.sub(r':::modo_guardar\s+.+?:::', '', formatted_response, flags=re.DOTALL)
+            formatted_response = re.sub(r':::modo_borrar\s+.+?:::', '', formatted_response)
+            formatted_response = re.sub(r':::modo_listar:::', '', formatted_response)
             
             final_text = formatted_response.strip()
             
@@ -808,6 +821,35 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             
             result = await control_light(luz_name, luz_action, luz_value)
             await context.bot.send_message(chat_id, result)
+
+        # 8. Light Modes - :::modo nombre:::
+        for modo_match in re.finditer(r":::modo\s+(\S+)(?:\s+(\S+))?:::", full_response):
+            modo_name = modo_match.group(1).strip()
+            result = await apply_preset(modo_name)
+            await context.bot.send_message(chat_id, result)
+
+        # 9. List Modes - :::modo_listar:::
+        if ":::modo_listar:::" in full_response:
+            result = list_presets()
+            await context.bot.send_message(chat_id, result)
+
+        # 10. Delete Mode - :::modo_borrar nombre:::
+        for del_match in re.finditer(r":::modo_borrar\s+(\S+):::", full_response):
+            del_name = del_match.group(1).strip()
+            result = delete_preset(del_name)
+            await context.bot.send_message(chat_id, result)
+            
+        # 11. Save Mode - :::modo_guardar nombre json:::
+        for save_match in re.finditer(r":::modo_guardar\s+(\S+)\s+(.+?):::", full_response, re.DOTALL):
+            save_name = save_match.group(1).strip()
+            save_json = save_match.group(2).strip()
+            try:
+                import json
+                save_data = json.loads(save_json)
+                result = add_preset(save_name, save_data)
+                await context.bot.send_message(chat_id, result)
+            except Exception as e:
+                await context.bot.send_message(chat_id, f"❌ Error guardando modo '{save_name}': Formato inválido.\n{str(e)}")
                  
     except Exception as e:
         # Fallback for main loop errors
