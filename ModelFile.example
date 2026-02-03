@@ -1,4 +1,3 @@
-FROM llama3.1:latest
-
+FROM ollama-localbot:latest
 PARAMETER num_ctx 9000
-PARAMETER temperature 0.3
+PARAMETER temperature 0.1

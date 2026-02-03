@@ -10,8 +10,6 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 import tempfile
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.client import OllamaClient
 from utils.cron_utils import CronUtils
@@ -55,7 +53,7 @@ MODEL_CONTEXT_SIZE = get_config("CONTEXT_LIMIT")
 
 # Store chat history in memory (simple dict for single-process bot)
 # chat_id -> list of messages
-chat_histories = {} 
+chat_histories = {}
 system_instructions = ""
 user_memory = ""
 
@@ -562,6 +560,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     # Authorization check
+    # Authorization check
     if not is_authorized(user_id):
         await update.message.reply_text(f"⛔ No tienes acceso a este bot.\nTu ID es: `{user_id}`", parse_mode="Markdown")
         return
@@ -858,7 +857,10 @@ async def check_events(context: ContextTypes.DEFAULT_TYPE):
     target_chats = []
     if NOTIFICATION_CHAT_ID:
         target_chats.append(NOTIFICATION_CHAT_ID)
-    target_chats.extend(chat_histories.keys())
+    else:
+        # Only use active chats if no fixed ID is set
+        # This is volatile (lost on restart) but acceptable if user opted out of .env
+        target_chats.extend(chat_histories.keys())
     
     if not target_chats:
         return  # No one to notify
