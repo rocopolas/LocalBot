@@ -2,6 +2,23 @@
 
 A smart personal assistant that runs locally using [Ollama](https://ollama.ai). Available as a Telegram bot and TUI interface.
 
+## 🤔 ¿Por qué LocalBot?
+
+| | LocalBot | Cloud Bots (Claude, GPT) |
+|---|---|---|
+| 💰 **Costo** | **Gratis** | $20+/mes o pago por uso |
+| 🔒 **Privacidad** | Tus datos nunca salen de tu PC | Tus chats van a servidores externos |
+| ⚡ **Velocidad** | Modelos pequeños = respuestas instantáneas | Depende de la API y tu plan |
+| 🌐 **Internet** | Funciona offline | Requiere conexión constante |
+| 🎛️ **Control** | Tú eliges el modelo, contexto, y todo | Limitado a lo que ofrecen |
+| 🏠 **Smart Home** | Controla tus luces, todo local | No disponible |
+
+**Ideal para:**
+- Usar modelos pequeños y rápidos (7B-14B params)
+- Mantener tu privacidad al 100%
+- No pagar suscripciones mensuales
+- Tener un asistente personal que corre en TU hardware
+
 ## ✨ Features
 
 - 💬 **Local LLM chat** - No external API dependencies
