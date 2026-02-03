@@ -20,6 +20,7 @@ from utils.audio_utils import transcribe_audio, transcribe_audio_large, is_whisp
 from utils.youtube_utils import is_youtube_url, download_youtube_audio, get_video_title
 from utils.document_utils import extract_text_from_document, is_supported_document
 from utils.email_utils import is_gmail_configured, fetch_emails_last_24h, format_emails_for_llm
+from utils.wiz_utils import control_light, is_wiz_available
 from utils.config_loader import get_config
 
 # Load environment variables
@@ -691,6 +692,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             final_formatted = re.sub(r':::memory_delete\s+.+?:::', '', final_formatted, flags=re.DOTALL)
             final_formatted = re.sub(r':::cron_delete\s+.+?:::', '', final_formatted)
             final_formatted = re.sub(r':::cron\s+.+?:::', '', final_formatted)
+            final_formatted = re.sub(r':::luz\s+.+?:::', '', final_formatted)
             final_formatted = final_formatted.strip()
             
             try:
@@ -710,6 +712,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             formatted_response = re.sub(r':::memory_delete\s+.+?:::', '', formatted_response, flags=re.DOTALL)
             formatted_response = re.sub(r':::cron_delete\s+.+?:::', '', formatted_response)
             formatted_response = re.sub(r':::cron\s+.+?:::', '', formatted_response)
+            formatted_response = re.sub(r':::luz\s+.+?:::', '', formatted_response)
             
             final_text = formatted_response.strip()
             
@@ -796,6 +799,15 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                     await context.bot.send_message(chat_id, f"💾 Guardado en memoria: _{memory_content}_", parse_mode="Markdown")
                 except Exception as e:
                     await context.bot.send_message(chat_id, f"⚠️ Error guardando memoria: {str(e)}")
+        
+        # 5. Light control commands - :::luz nombre accion valor:::
+        for luz_match in re.finditer(r":::luz\s+(\S+)\s+(\S+)(?:\s+(\S+))?:::", full_response):
+            luz_name = luz_match.group(1).strip()
+            luz_action = luz_match.group(2).strip()
+            luz_value = luz_match.group(3).strip() if luz_match.group(3) else None
+            
+            result = await control_light(luz_name, luz_action, luz_value)
+            await context.bot.send_message(chat_id, result)
                  
     except Exception as e:
         # Fallback for main loop errors

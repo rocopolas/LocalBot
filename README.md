@@ -13,6 +13,7 @@ A smart personal assistant that runs locally using [Ollama](https://ollama.ai). 
 - 📧 **Email digest** - Read and summarize emails from Gmail
 - ⏰ **Reminders** - Schedule cron tasks that notify you in chat
 - 🧠 **Persistent memory** - The bot remembers information about you
+- 💡 **Smart lights** - Control WIZ lights via chat
 
 ## 📁 Structure
 
@@ -158,6 +159,24 @@ If Gmail is configured, the bot will:
 - Read emails from the last 24 hours
 - Use LLM to identify important emails
 - Send you a summary on Telegram
+
+### Smart Lights (Optional)
+Control WIZ lights via natural language:
+- "Turn off the bedroom lights"
+- "Set brightness to 50%"
+- "Change color to red"
+
+**Configuration** in `config.yaml`:
+```yaml
+WIZ_LIGHTS:
+  bedroom:  # Single light
+    - "192.168.0.121"
+  living:   # Multiple lights (group)
+    - "192.168.0.63"
+    - "192.168.0.115"
+```
+
+**Requires**: `pip install pywizlight`
 
 ## 🔧 Development
 
