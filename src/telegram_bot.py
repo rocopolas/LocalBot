@@ -22,6 +22,7 @@ from utils.youtube_utils import is_youtube_url, download_youtube_audio, get_vide
 from utils.document_utils import extract_text_from_document, is_supported_document
 from utils.email_utils import is_gmail_configured, fetch_emails_last_24h, format_emails_for_llm
 from utils.wiz_utils import control_light, is_wiz_available
+from utils.twitter_utils import is_twitter_url, download_twitter_video, get_twitter_media_url
 from utils.config_loader import get_config
 
 # Load environment variables
@@ -631,6 +632,49 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             chat_histories[chat_id].append({"role": "system", "content": system_prompt})
 
     placeholder_msg = None # Initialize placeholder to reuse for YouTube status
+
+    # Check for Twitter/X URL with download intent
+    twitter_url = is_twitter_url(user_text)
+    if twitter_url:
+        keywords = ["descarga", "baja", "video", "multimedia", "bajar", "guardar", "sacar", "download", "save", "get", "fetch"]
+        should_download = any(k in user_text.lower() for k in keywords)
+        
+        if should_download:
+            status_msg = await context.bot.send_message(chat_id, "🐦 Analizando enlace de Twitter/X...")
+            try:
+                # Try to download first
+                media_path = await download_twitter_video(twitter_url)
+                await context.bot.send_chat_action(chat_id=chat_id, action="upload_document")
+                await status_msg.edit_text("📤 Subiendo multimedia...")
+                
+                with open(media_path, 'rb') as f:
+                    # Determine type based on extension
+                    if media_path.endswith(('.jpg', '.png', '.jpeg')):
+                        await context.bot.send_photo(chat_id, photo=f)
+                    else:
+                        await context.bot.send_video(chat_id, video=f)
+                
+                # Cleanup
+                try:
+                    os.unlink(media_path)
+                    os.rmdir(os.path.dirname(media_path))
+                except: pass
+                
+                await status_msg.delete()
+                # Stop processing (successful download)
+                return 
+
+            except Exception as e:
+                # If download fails (e.g. too big), try giving the link
+                err_msg = str(e)
+                direct_url = await get_twitter_media_url(twitter_url)
+                if direct_url and "Error" not in direct_url:
+                    await status_msg.edit_text(f"⚠️ No pude subir el archivo (quizás es muy grande). Aquí tienes el link directo:\n{direct_url}", disable_web_page_preview=True)
+                    return
+                
+                await status_msg.edit_text(f"❌ Error con Twitter: {err_msg}")
+                # Continue to normal LLM flow if failed? No, probably enough.
+                return
 
     # Check for YouTube URL
     youtube_url = is_youtube_url(user_text)

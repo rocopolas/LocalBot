@@ -8,6 +8,7 @@ A smart personal assistant that runs locally using [Ollama](https://ollama.ai). 
 - 📷 **Image analysis** - Describe and understand images with vision model
 - 🎙️ **Audio transcription** - Convert voice messages to text with Whisper
 - 🎥 **YouTube summaries** - Send a link and get a summary
+- 🐦 **Twitter/X downloader** - Download videos/images directly
 - 🔍 **Web search** - Brave Search integration
 - 📄 **Document reading** - Analyze and chat with PDF or text files
 - 📧 **Email digest** - Read and summarize emails from Gmail
@@ -160,6 +161,10 @@ python src/main.py
 ### YouTube Summary
 - Send a YouTube link → Bot downloads, transcribes and summarizes
 
+### Twitter/X Media Download
+- Send a Twitter/X link and ask to "download" or "bajar"
+- The bot will download the video/image and send the file to you
+
 ### Document Reading
 - Send a PDF, DOCX, or TXT file → Bot extracts text and responds
 - Send document + caption → Bot considers both for response
@@ -187,13 +192,8 @@ Control WIZ lights via natural language:
 - "Set brightness to 50%"
 - "Change color to red"
 
-**Scenes (Modes):**
-- "Activate sleep mode" (Scenes defined in `data/presets.yaml`)
-- **Dynamic Creation:** "Create a reading mode with warm light at 80% and turn off the rest"
-- **Management:**
-  - "Save this as romantic mode"
-  - "Delete party mode"
-  - "List available modes"
+- "Change color to red"
+- "Turn off all lights"
 
 **Configuration** in `config.yaml`:
 ```yaml
