@@ -187,6 +187,14 @@ Control WIZ lights via natural language:
 - "Set brightness to 50%"
 - "Change color to red"
 
+**Scenes (Modes):**
+- "Activate sleep mode" (Scenes defined in `data/presets.yaml`)
+- **Dynamic Creation:** "Create a reading mode with warm light at 80% and turn off the rest"
+- **Management:**
+  - "Save this as romantic mode"
+  - "Delete party mode"
+  - "List available modes"
+
 **Configuration** in `config.yaml`:
 ```yaml
 WIZ_LIGHTS:
