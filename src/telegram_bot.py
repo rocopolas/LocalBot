@@ -27,7 +27,7 @@ from utils.config_loader import get_config
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-EVENTS_FILE = get_config("EVENTS_FILE")
+EVENTS_FILE = os.path.join(PROJECT_ROOT, get_config("EVENTS_FILE"))
 
 # Authorization: Comma-separated user IDs allowed to use the bot
 # If empty, NO ONE is authorized (secure by default)
