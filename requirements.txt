@@ -45,3 +45,4 @@ yt-dlp==2023.11.16
 pyyaml
 pymupdf
 python-docx
+pywizlight
