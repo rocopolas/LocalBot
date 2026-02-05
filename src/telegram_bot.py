@@ -5,6 +5,7 @@ import asyncio
 import logging
 import base64
 import httpx
+from contextlib import suppress
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from telegram import Update
@@ -25,7 +26,7 @@ from utils.email_utils import is_gmail_configured, fetch_emails_last_24h, format
 from utils.wiz_utils import control_light, is_wiz_available
 from utils.twitter_utils import is_twitter_url, download_twitter_video, get_twitter_media_url
 from utils.config_loader import get_config
-from utils.telegram_utils import split_message
+from utils.telegram_utils import split_message, format_bot_response, escape_markdown
 
 # Load environment variables
 load_dotenv()
@@ -56,6 +57,18 @@ logging.basicConfig(
 # Global constants from config
 MODEL = get_config("MODEL")
 MODEL_CONTEXT_SIZE = get_config("CONTEXT_LIMIT")
+
+# Pre-compiled regex patterns for performance
+COMMAND_PATTERNS = {
+    'memory': re.compile(r':::memory\s+(.+?):::', re.DOTALL),
+    'memory_delete': re.compile(r':::memory_delete\s+(.+?):::', re.DOTALL),
+    'cron': re.compile(r':::cron\s+(.+?)\s+(.+?):::'),
+    'cron_delete': re.compile(r':::cron_delete\s+(.+?):::'),
+    'search': re.compile(r':::search\s+(.+?):::'),
+    'foto': re.compile(r':::foto\s+(.+?):::', re.IGNORECASE),
+    'luz': re.compile(r':::luz\s+(\S+)\s+(\S+)(?:\s+(\S+))?:::'),
+    'camara': re.compile(r':::camara(?:\s+\S+)?:::'),
+}
 
 # Store chat history in memory (simple dict for single-process bot)
 # chat_id -> list of messages
@@ -246,11 +259,6 @@ async def restart_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
-def escape_markdown(text: str) -> str:
-    """Helper to escape Markdown special characters for Telegram."""
-    escape_chars = r'_*[]()~`>#+-=|{}.!'
-    return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
-
 def prune_history(history, max_tokens=30000):
     """
     Prunes chat history to keep estimated token usage below limit.
@@ -334,12 +342,10 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             transcription = await transcribe_audio_large(tmp_path)
         else:
             transcription = await transcribe_audio(tmp_path)
-        
+
         # Clean up temp file
-        try:
+        with suppress(FileNotFoundError, PermissionError, OSError):
             os.unlink(tmp_path)
-        except:
-            pass
         
         if is_external:
             # External: just show transcription, don't process with LLM
@@ -406,13 +412,11 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Transcribe with LARGE model
         transcription = await transcribe_audio_large(tmp_path)
-        
+
         # Clean up temp file
-        try:
+        with suppress(FileNotFoundError, PermissionError, OSError):
             os.unlink(tmp_path)
-        except:
-            pass
-        
+
         # Show transcription only (no LLM processing)
         text = f"📝 *Transcripción de* `{file_name}`:\n\n{transcription}"
         chunks = split_message(text)
@@ -461,11 +465,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             image_base64 = base64.b64encode(f.read()).decode("utf-8")
         
         # Clean up temp file
-        try:
+        with suppress(FileNotFoundError, PermissionError, OSError):
             os.unlink(tmp_path)
-        except:
-            pass
-        
+
         # Get image description from vision model
         client = OllamaClient()
         await status_msg.edit_text(f"🔍 Analizando imagen con {vision_model}...")
@@ -508,13 +510,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             full_response += chunk
         
         # Format response and strip commands
-        formatted_response = full_response.replace("<think>", "> 🧠 **Pensando:**\n> ").replace("</think>", "\n\n")
-        formatted_response = re.sub(r'\x1b\[[0-9;]*m', '', formatted_response)
-        formatted_response = re.sub(r':::memory\s+.+?:::', '', formatted_response, flags=re.DOTALL)
-        formatted_response = re.sub(r':::memory_delete\s+.+?:::', '', formatted_response, flags=re.DOTALL)
-        formatted_response = re.sub(r':::foto\s+.+?:::', '', formatted_response, flags=re.IGNORECASE)
-        formatted_response = re.sub(r':::luz\s+.+?:::', '', formatted_response, flags=re.IGNORECASE)
-        formatted_response = formatted_response.strip()
+        formatted_response = format_bot_response(full_response)
         
         try:
             await status_msg.edit_text(formatted_response, parse_mode="Markdown")
@@ -523,9 +519,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Add to history
         chat_histories[chat_id].append({"role": "assistant", "content": full_response})
-        
+
         # Parse memory commands
-        for memory_match in re.finditer(r":::memory\s+(.+?):::", full_response, re.DOTALL):
+        for memory_match in COMMAND_PATTERNS['memory'].finditer(full_response):
             memory_content = memory_match.group(1).strip()
             if memory_content:
                 try:
@@ -536,7 +532,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_message(chat_id, f"💾 Guardado en memoria: _{memory_content}_", parse_mode="Markdown")
                 except Exception as e:
                     await context.bot.send_message(chat_id, f"⚠️ Error guardando memoria: {str(e)}")
-        
+
     except Exception as e:
         await status_msg.edit_text(f"❌ Error: {str(e)}")
 
@@ -575,11 +571,9 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         doc_text, doc_type = extract_text_from_document(tmp_path, file_name)
         
         # Clean up temp file
-        try:
+        with suppress(FileNotFoundError, PermissionError, OSError):
             os.unlink(tmp_path)
-        except:
-            pass
-        
+
         # Check if extraction failed
         if doc_text.startswith("[Error"):
             await status_msg.edit_text(doc_text)
@@ -615,13 +609,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             full_response += chunk
         
         # Format response and strip commands
-        formatted_response = full_response.replace("<think>", "> 🧠 **Pensando:**\n> ").replace("</think>", "\n\n")
-        formatted_response = re.sub(r'\x1b\[[0-9;]*m', '', formatted_response)
-        formatted_response = re.sub(r':::memory\s+.+?:::', '', formatted_response, flags=re.DOTALL)
-        formatted_response = re.sub(r':::memory_delete\s+.+?:::', '', formatted_response, flags=re.DOTALL)
-        formatted_response = re.sub(r':::foto\s+.+?:::', '', formatted_response, flags=re.IGNORECASE)
-        formatted_response = re.sub(r':::luz\s+.+?:::', '', formatted_response, flags=re.IGNORECASE)
-        formatted_response = formatted_response.strip()
+        formatted_response = format_bot_response(full_response)
         
         # Split and send chunks
         chunks = split_message(formatted_response)
@@ -639,9 +627,9 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Add to history
         chat_histories[chat_id].append({"role": "assistant", "content": full_response})
-        
+
         # Parse memory commands
-        for memory_match in re.finditer(r":::memory\s+(.+?):::", full_response, re.DOTALL):
+        for memory_match in COMMAND_PATTERNS['memory'].finditer(full_response):
             memory_content = memory_match.group(1).strip()
             if memory_content:
                 try:
@@ -652,7 +640,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_message(chat_id, f"💾 Guardado en memoria: _{memory_content}_", parse_mode="Markdown")
                 except Exception as e:
                     await context.bot.send_message(chat_id, f"⚠️ Error guardando memoria: {str(e)}")
-        
+
     except Exception as e:
         await status_msg.edit_text(f"❌ Error: {str(e)}")
 
@@ -867,7 +855,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             full_response += chunk
             
         # --- Check for Search Command BEFORE displaying ---
-        search_match = re.search(r":::search\s+(.+?):::", full_response)
+        search_match = COMMAND_PATTERNS['search'].search(full_response)
         if search_match:
             search_query = search_match.group(1).strip()
             
@@ -890,17 +878,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             full_response = final_response
             
             # Format the final response (no search command visible)
-            final_formatted = final_response.replace("<think>", "> 🧠 **Pensando:**\n> ").replace("</think>", "\n\n")
-            final_formatted = re.sub(r'\x1b\[[0-9;]*m', '', final_formatted)
-            # Remove all command patterns from output
-            final_formatted = re.sub(r':::search\s+.+?:::', '', final_formatted)
-            final_formatted = re.sub(r':::memory\s+.+?:::', '', final_formatted, flags=re.DOTALL)
-            final_formatted = re.sub(r':::memory_delete\s+.+?:::', '', final_formatted, flags=re.DOTALL)
-            final_formatted = re.sub(r':::cron_delete\s+.+?:::', '', final_formatted)
-            final_formatted = re.sub(r':::cron\s+.+?:::', '', final_formatted)
-            final_formatted = re.sub(r':::luz\s+.+?:::', '', final_formatted)
-            final_formatted = re.sub(r':::camara(?:\s+\S+)?:::', '', final_formatted)
-            final_formatted = final_formatted.strip()
+            final_formatted = format_bot_response(final_response)
             
             # Split and send chunks
             chunks = split_message(final_formatted)
@@ -920,21 +898,8 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             chat_histories[chat_id].append({"role": "assistant", "content": final_response})
             # Skip to cron parsing (search already handled)
         else:
-            formatted_response = full_response
-            formatted_response = formatted_response.replace("<think>", "> 🧠 **Pensando:**\n> ")
-            formatted_response = formatted_response.replace("</think>", "\n\n")
-            formatted_response = re.sub(r'\x1b\[[0-9;]*m', '', formatted_response)
-            # Remove all command patterns from output
-            formatted_response = re.sub(r':::memory\s+.+?:::', '', formatted_response, flags=re.DOTALL)
-            formatted_response = re.sub(r':::memory_delete\s+.+?:::', '', formatted_response, flags=re.DOTALL)
-            formatted_response = re.sub(r':::cron_delete\s+.+?:::', '', formatted_response)
-            formatted_response = re.sub(r':::cron\s+.+?:::', '', formatted_response)
-            formatted_response = re.sub(r':::foto\s+.+?:::', '', formatted_response, flags=re.IGNORECASE)
-            formatted_response = re.sub(r':::luz\s+.+?:::', '', formatted_response, flags=re.IGNORECASE)
-
-            formatted_response = re.sub(r':::camara(?:\s+\S+)?:::', '', formatted_response)
-            
-            final_text = formatted_response.strip()
+            formatted_response = format_bot_response(full_response)
+            final_text = formatted_response
             
             # If after stripping commands the message is empty, delete placeholder
             if not final_text:
@@ -962,22 +927,22 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
         
         # --- Command Parsing ---
         # 1. Delete commands
-        for delete_match in re.finditer(r":::cron_delete\s+(.+?):::", full_response):
+        for delete_match in COMMAND_PATTERNS['cron_delete'].finditer(full_response):
             target = delete_match.group(1).strip()
             # Escape target for markdown display
-            target_esc = target.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`") 
+            target_esc = escape_markdown(target)
             await context.bot.send_message(chat_id, f"🗑️  Eliminando tarea que contenga: `{target_esc}`", parse_mode="Markdown")
-            
+
             if CronUtils.delete_job(target):
                 await context.bot.send_message(chat_id, f"✅ Tarea eliminada con éxito.")
             else:
                  await context.bot.send_message(chat_id, f"⚠️ No se encontraron tareas coincidentes.")
 
         # 2. Add commands
-        for cron_match in re.finditer(r":::cron\s+(.+?)\s+(.+?):::", full_response):
+        for cron_match in COMMAND_PATTERNS['cron'].finditer(full_response):
             schedule = cron_match.group(1).strip()
             command = cron_match.group(2).strip()
-            
+
             if command.endswith(":"):
                command = command[:-1].strip()
 
@@ -986,31 +951,31 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             if "echo" in command and ">>" not in command:
                  # Ensure we use the configured absolute path
                  command += f" >> {EVENTS_FILE}"
-            
+
             # Escape for display
-            sched_esc = schedule.replace("_", "\\_").replace("*", "\\*")
-            cmd_esc = command.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
-            
+            sched_esc = escape_markdown(schedule)
+            cmd_esc = escape_markdown(command)
+
             await context.bot.send_message(chat_id, f"⚠️  Agregando tarea Cron: `{sched_esc} {cmd_esc}`", parse_mode="Markdown")
-            
+
             if CronUtils.add_job(schedule, command):
                  await context.bot.send_message(chat_id, f"✅ Tarea agregada con éxito.")
             else:
                  await context.bot.send_message(chat_id, f"❌ Error al agregar tarea.")
         
         # 3. Memory delete commands - remove from memory.md
-        for memory_del_match in re.finditer(r":::memory_delete\s+(.+?):::", full_response, re.DOTALL):
+        for memory_del_match in COMMAND_PATTERNS['memory_delete'].finditer(full_response):
             target = memory_del_match.group(1).strip()
             if target:
                 try:
                     memory_path = os.path.join(PROJECT_ROOT, get_config("MEMORY_FILE"))
                     with open(memory_path, "r", encoding="utf-8") as f:
                         lines = f.readlines()
-                    
+
                     # Filter out lines containing the target
                     new_lines = [line for line in lines if target.lower() not in line.lower()]
                     removed = len(lines) - len(new_lines)
-                    
+
                     if removed > 0:
                         with open(memory_path, "w", encoding="utf-8") as f:
                             f.writelines(new_lines)
@@ -1022,7 +987,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                     await context.bot.send_message(chat_id, f"⚠️ Error eliminando memoria: {str(e)}")
         
         # 4. Memory add commands - append to memory.md
-        for memory_match in re.finditer(r":::memory\s+(.+?):::", full_response, re.DOTALL):
+        for memory_match in COMMAND_PATTERNS['memory'].finditer(full_response):
             memory_content = memory_match.group(1).strip()
             if memory_content:
                 try:
@@ -1036,16 +1001,16 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                     await context.bot.send_message(chat_id, f"⚠️ Error guardando memoria: {str(e)}")
         
         # 5. Light control commands - :::luz nombre accion valor:::
-        for luz_match in re.finditer(r":::luz\s+(\S+)\s+(\S+)(?:\s+(\S+))?:::", full_response):
+        for luz_match in COMMAND_PATTERNS['luz'].finditer(full_response):
             luz_name = luz_match.group(1).strip()
             luz_action = luz_match.group(2).strip()
             luz_value = luz_match.group(3).strip() if luz_match.group(3) else None
-            
+
             result = await control_light(luz_name, luz_action, luz_value)
             await context.bot.send_message(chat_id, result)
 
         # 6. Image Search Command - :::foto QUERY:::
-        for foto_match in re.finditer(r":::foto\s+(.+?):::", full_response, re.IGNORECASE):
+        for foto_match in COMMAND_PATTERNS['foto'].finditer(full_response):
             query = foto_match.group(1).strip()
             if query:
                 status_msg = await context.bot.send_message(chat_id, f"🔍 Buscando imágenes de '_{query}_'...", parse_mode="Markdown")

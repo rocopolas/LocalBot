@@ -1,3 +1,65 @@
+import re
+from typing import Optional
+
+
+def format_bot_response(
+    response: str,
+    include_thinking: bool = True,
+    remove_commands: bool = True,
+    escape_ansi: bool = True
+) -> str:
+    """
+    Formatea la respuesta del bot eliminando comandos internos y procesando tags.
+    
+    Args:
+        response: Respuesta cruda del LLM
+        include_thinking: Si True, convierte <think> en formato markdown
+        remove_commands: Si True, elimina comandos :::xxx:::
+        escape_ansi: Si True, elimina códigos de color ANSI
+    
+    Returns:
+        Texto formateado listo para enviar al usuario
+    """
+    formatted = response
+    
+    # Procesar tags de pensamiento
+    if include_thinking:
+        formatted = formatted.replace("<think>", "> 🧠 **Pensando:**\n> ")
+        formatted = formatted.replace("</think>", "\n\n")
+    else:
+        # Eliminar completamente los bloques de pensamiento
+        formatted = re.sub(r'<think>.*?</think>', '', formatted, flags=re.DOTALL)
+    
+    # Eliminar códigos ANSI
+    if escape_ansi:
+        formatted = re.sub(r'\x1b\[[0-9;]*m', '', formatted)
+    
+    # Eliminar comandos internos
+    if remove_commands:
+        # Comandos de memoria
+        formatted = re.sub(r':::memory\s+.+?:::', '', formatted, flags=re.DOTALL)
+        formatted = re.sub(r':::memory_delete\s+.+?:::', '', formatted, flags=re.DOTALL)
+        
+        # Comandos de cron
+        formatted = re.sub(r':::cron\s+.+?:::', '', formatted)
+        formatted = re.sub(r':::cron_delete\s+.+?:::', '', formatted)
+        
+        # Comandos de búsqueda
+        formatted = re.sub(r':::search\s+.+?:::', '', formatted)
+        formatted = re.sub(r':::foto\s+.+?:::', '', formatted, flags=re.IGNORECASE)
+        
+        # Comandos de dispositivos
+        formatted = re.sub(r':::luz\s+.+?:::', '', formatted, flags=re.IGNORECASE)
+        formatted = re.sub(r':::camara(?:\s+\S+)?:::', '', formatted)
+    
+    return formatted.strip()
+
+
+def escape_markdown(text: str) -> str:
+    """Escapa caracteres especiales de Markdown para Telegram."""
+    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
+
 
 def split_message(text, limit=4096):
     """
