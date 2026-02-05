@@ -649,7 +649,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     # Authorization check
-    # Authorization check
     if not is_authorized(user_id):
         await update.message.reply_text(f"⛔ No tienes acceso a este bot.\nTu ID es: `{user_id}`", parse_mode="Markdown")
         return

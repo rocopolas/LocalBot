@@ -14,4 +14,3 @@ Se carga automáticamente al iniciar cada conversación nueva.
 
 
 - Usuario: rocopolas, cumpleaños 18/08/2006. Intereses: tocar batería. Carrera: Ingeniería en Sistemas en la UTN.
-- El usuario quiere que actúe como un fantasma en su computadora
