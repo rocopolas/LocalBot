@@ -1,9 +1,13 @@
 """Document utilities for extracting text from PDFs and Office documents."""
 import os
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def extract_text_from_pdf(file_path: str) -> str:
-    """Extracts text from a PDF file."""
+def _extract_text_from_pdf_sync(file_path: str) -> str:
+    """Synchronous PDF text extraction."""
     try:
         import pymupdf  # PyMuPDF
         text_parts = []
@@ -17,8 +21,8 @@ def extract_text_from_pdf(file_path: str) -> str:
         return f"[Error leyendo PDF: {str(e)}]"
 
 
-def extract_text_from_docx(file_path: str) -> str:
-    """Extracts text from a Word document (.docx)."""
+def _extract_text_from_docx_sync(file_path: str) -> str:
+    """Synchronous DOCX text extraction."""
     try:
         from docx import Document
         doc = Document(file_path)
@@ -32,23 +36,48 @@ def extract_text_from_docx(file_path: str) -> str:
         return f"[Error leyendo DOCX: {str(e)}]"
 
 
-def extract_text_from_document(file_path: str, file_name: str) -> tuple[str, str]:
+def _extract_text_from_txt_sync(file_path: str) -> str:
+    """Synchronous TXT text extraction."""
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception as e:
+        return f"[Error leyendo archivo: {str(e)}]"
+
+
+async def extract_text_from_pdf(file_path: str) -> str:
+    """Extracts text from a PDF file (async wrapper)."""
+    return await asyncio.to_thread(_extract_text_from_pdf_sync, file_path)
+
+
+async def extract_text_from_docx(file_path: str) -> str:
+    """Extracts text from a Word document (async wrapper)."""
+    return await asyncio.to_thread(_extract_text_from_docx_sync, file_path)
+
+
+async def extract_text_from_document(file_path: str, file_name: str) -> tuple[str, str]:
     """
     Extracts text from a document based on its extension.
-    Returns (text, doc_type) tuple.
+    Runs extraction in thread pool to avoid blocking.
+    
+    Args:
+        file_path: Path to the document file
+        file_name: Original file name for type detection
+        
+    Returns:
+        Tuple of (text, doc_type)
     """
     name_lower = file_name.lower()
     
     if name_lower.endswith(".pdf"):
-        return extract_text_from_pdf(file_path), "PDF"
+        text = await extract_text_from_pdf(file_path)
+        return text, "PDF"
     elif name_lower.endswith(".docx"):
-        return extract_text_from_docx(file_path), "Word"
+        text = await extract_text_from_docx(file_path)
+        return text, "Word"
     elif name_lower.endswith(".txt") or name_lower.endswith(".md"):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                return f.read().strip(), "Texto"
-        except Exception as e:
-            return f"[Error leyendo archivo: {str(e)}]", "Texto"
+        text = await asyncio.to_thread(_extract_text_from_txt_sync, file_path)
+        return text, "Texto"
     else:
         return "[Formato no soportado. Formatos válidos: PDF, DOCX, TXT, MD]", "Desconocido"
 

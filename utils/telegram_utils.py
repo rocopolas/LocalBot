@@ -146,3 +146,47 @@ def split_message(text, limit=4096):
         parts.append(text)
 
     return parts
+
+
+def prune_history(history: list, max_tokens: int = 30000) -> list:
+    """
+    Prunes chat history to keep estimated token usage below limit.
+    Preserves system prompt and prioritizes recent messages.
+    
+    Args:
+        history: List of message dictionaries
+        max_tokens: Maximum tokens allowed
+        
+    Returns:
+        Pruned history list
+    """
+    # Estimate 1 token ~= 4 chars (rough fast check)
+    current_chars = sum(len(m.get('content', '')) for m in history)
+    limit_chars = max_tokens * 4
+    
+    if current_chars <= limit_chars:
+        return history
+    
+    # Split system and others
+    system_msgs = [msg for msg in history if msg.get('role') == 'system']
+    other_msgs = [msg for msg in history if msg.get('role') != 'system']
+    
+    # Calculate system usage
+    system_chars = sum(len(m.get('content', '')) for m in system_msgs)
+    budget = limit_chars - system_chars
+    
+    if budget <= 0:
+        return system_msgs  # Should not happen unless system prompt is huge
+    
+    kept_msgs = []
+    current_usage = 0
+    
+    # Take from end (most recent first)
+    for msg in reversed(other_msgs):
+        msg_len = len(msg.get('content', ''))
+        if current_usage + msg_len > budget:
+            break
+        kept_msgs.append(msg)
+        current_usage += msg_len
+    
+    return system_msgs + list(reversed(kept_msgs))

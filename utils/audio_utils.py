@@ -1,11 +1,17 @@
+"""Audio transcription utilities using faster-whisper."""
 import os
+import asyncio
 from pathlib import Path
 from utils.config_loader import get_config
 import gc
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Lazy load whisper to avoid import errors if not installed
 _model = None
 _model_large = None
+
 
 def get_whisper_model():
     """Lazy load faster-whisper model for voice messages."""
@@ -15,9 +21,12 @@ def get_whisper_model():
             from faster_whisper import WhisperModel
             model_name = get_config("WHISPER_MODEL_VOICE")
             _model = WhisperModel(model_name, device="cpu", compute_type="int8")
+            logger.info(f"Loaded whisper model: {model_name}")
         except ImportError:
+            logger.error("faster-whisper not installed")
             return None
     return _model
+
 
 def get_whisper_model_large():
     """Lazy load faster-whisper model for external audio."""
@@ -27,9 +36,12 @@ def get_whisper_model_large():
             from faster_whisper import WhisperModel
             model_name = get_config("WHISPER_MODEL_EXTERNAL")
             _model_large = WhisperModel(model_name, device="cpu", compute_type="int8")
+            logger.info(f"Loaded large whisper model: {model_name}")
         except ImportError:
+            logger.error("faster-whisper not installed")
             return None
     return _model_large
+
 
 def unload_whisper_model():
     """Unload the voice whisper model from memory."""
@@ -38,6 +50,8 @@ def unload_whisper_model():
         del _model
         _model = None
         gc.collect()
+        logger.debug("Unloaded whisper model")
+
 
 def unload_whisper_model_large():
     """Unload the large whisper model from memory."""
@@ -46,12 +60,30 @@ def unload_whisper_model_large():
         del _model_large
         _model_large = None
         gc.collect()
+        logger.debug("Unloaded large whisper model")
+
+
+def _transcribe_sync(model, audio_path: str, language: str):
+    """Synchronous transcription helper."""
+    segments, info = model.transcribe(audio_path, language=language)
+    
+    text_parts = []
+    for segment in segments:
+        text_parts.append(segment.text.strip())
+    
+    return " ".join(text_parts).strip()
+
 
 async def transcribe_audio(audio_path: str) -> str:
     """
     Transcribes an audio file using faster-whisper.
-    Returns the transcription text or an error message.
-    Unloads the model after transcription to free RAM.
+    Runs the blocking transcription in a thread.
+    
+    Args:
+        audio_path: Path to audio file
+        
+    Returns:
+        Transcription text or error message
     """
     model = get_whisper_model()
     
@@ -60,26 +92,37 @@ async def transcribe_audio(audio_path: str) -> str:
     
     try:
         language = get_config("WHISPER_LANGUAGE")
-        segments, info = model.transcribe(audio_path, language=language)
         
-        text_parts = []
-        for segment in segments:
-            text_parts.append(segment.text.strip())
+        # Run blocking operation in thread
+        transcription = await asyncio.to_thread(
+            _transcribe_sync, model, audio_path, language
+        )
         
-        transcription = " ".join(text_parts).strip()
         transcription = " ".join(transcription.split())
-        return transcription if transcription else "[Audio sin contenido detectado]"
+        
+        if transcription:
+            logger.info(f"Transcription completed ({len(transcription)} chars)")
+            return transcription
+        else:
+            return "[Audio sin contenido detectado]"
         
     except Exception as e:
+        logger.error(f"Transcription error: {e}")
         return f"[Error de transcripción: {str(e)}]"
     finally:
         unload_whisper_model()
 
+
 async def transcribe_audio_large(audio_path: str) -> str:
     """
     Transcribes an audio file using the larger whisper model.
-    For external audio files that need better quality.
-    Unloads the model after transcription to free RAM.
+    Runs the blocking transcription in a thread.
+    
+    Args:
+        audio_path: Path to audio file
+        
+    Returns:
+        Transcription text or error message
     """
     model = get_whisper_model_large()
     
@@ -88,20 +131,26 @@ async def transcribe_audio_large(audio_path: str) -> str:
     
     try:
         language = get_config("WHISPER_LANGUAGE")
-        segments, info = model.transcribe(audio_path, language=language)
         
-        text_parts = []
-        for segment in segments:
-            text_parts.append(segment.text.strip())
+        # Run blocking operation in thread
+        transcription = await asyncio.to_thread(
+            _transcribe_sync, model, audio_path, language
+        )
         
-        transcription = " ".join(text_parts).strip()
         transcription = " ".join(transcription.split())
-        return transcription if transcription else "[Audio sin contenido detectado]"
+        
+        if transcription:
+            logger.info(f"Large model transcription completed ({len(transcription)} chars)")
+            return transcription
+        else:
+            return "[Audio sin contenido detectado]"
         
     except Exception as e:
+        logger.error(f"Large transcription error: {e}")
         return f"[Error de transcripción: {str(e)}]"
     finally:
         unload_whisper_model_large()
+
 
 def is_whisper_available() -> bool:
     """Check if faster-whisper is available."""
@@ -110,4 +159,3 @@ def is_whisper_available() -> bool:
         return True
     except ImportError:
         return False
-
