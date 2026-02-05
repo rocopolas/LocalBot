@@ -87,3 +87,28 @@ MarkdownBlockQuote {
     color: red;
     border: solid red;
 }
+
+.info-container {
+    background: $primary-darken-3;
+    border: solid $primary;
+}
+
+.warning-container {
+    background: $warning-darken-3;
+    border: solid $warning;
+}
+
+.error-container {
+    background: $error-darken-3;
+    border: solid $error;
+}
+
+.success-container {
+    background: $success-darken-3;
+    border: solid $success;
+}
+
+.notification-container {
+    background: $accent-darken-3;
+    border: solid $accent;
+}

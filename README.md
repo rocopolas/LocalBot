@@ -169,6 +169,25 @@ source venv_bot/bin/activate
 python src/main.py
 ```
 
+**TUI Features:**
+- 💾 **Persistent History**: Conversations saved automatically
+- 📂 **Session Management**: Save/load multiple sessions
+- 📄 **Export**: Export conversations to markdown
+- 🔔 **Notifications**: Receive cron notifications in TUI
+- ⌨️ **Slash Commands**: Quick access to functions
+
+**TUI Commands:**
+```
+/status         - View token usage and model status
+/new, /clear    - Start new conversation
+/save [name]    - Save current session
+/load [name]    - Load saved session
+/sessions       - List all saved sessions
+/export [file]  - Export to markdown file
+/unload         - Unload models from RAM
+/help           - Show all commands
+```
+
 ### Running Tests
 ```bash
 # Install test dependencies
