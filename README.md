@@ -110,18 +110,38 @@ cd LocalBot
 ```
 
 2. **Run the bot (auto-setup):**
+
+**Linux:**
 ```bash
 chmod +x run.sh
 ./run.sh
 ```
 
-The script will:
+**macOS:**
+```bash
+# Option 1: Terminal
+chmod +x run.command
+./run.command
+
+# Option 2: Double-click run.command in Finder
+# (You may need to right-click → Open the first time)
+```
+
+**Windows:**
+```cmd
+# Option 1: Command Prompt or PowerShell
+run.bat
+
+# Option 2: Double-click run.bat in File Explorer
+```
+
+The script will automatically:
 - Create virtual environment (if needed)
-- Install Python 3.12 (if not present)
+- Install Python 3.12 (if not present on Linux)
 - Install all dependencies
 - Start the bot
 
-3. **Configure environment variables:**
+3. **Configure environment variables:
 ```bash
 cp .env.example .env
 # Edit .env with your tokens

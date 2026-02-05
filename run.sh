@@ -1,7 +1,9 @@
 #!/bin/bash
-set -e
 
-# Colores para mensajes
+# LocalBot Universal Launcher
+# Works on Linux, macOS, and Windows (Git Bash/WSL)
+
+# Colors for output
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 RED='\033[0;31m'
@@ -10,62 +12,119 @@ NC='\033[0m' # No Color
 
 VENV_NAME="venv_bot"
 
-# Ensure we are in the script's directory
-cd "$(dirname "$0")"
+echo -e "${CYAN}=== LocalBot Universal Launcher ===${NC}"
 
-echo -e "${CYAN}=== LocalBot - Iniciando ===${NC}"
-
-# Verificar si el entorno ya existe y está funcional
-if [ -d "$VENV_NAME" ] && [ -f "$VENV_NAME/bin/activate" ]; then
-    echo -e "${GREEN}✓ Entorno virtual encontrado.${NC}"
-    source "$VENV_NAME"/bin/activate
-    
-    # Verificar si las dependencias están instaladas
-    if python -c "import telegram" 2>/dev/null; then
-        echo -e "${GREEN}✓ Dependencias instaladas.${NC}"
-    else
-        echo -e "${YELLOW}⚠ Faltan dependencias. Instalando...${NC}"
-        pip install -r requirements.txt
-    fi
+# Detect OS
+OS="unknown"
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    OS="linux"
+    PYTHON_CMD="python3"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    OS="macos"
+    PYTHON_CMD="python3"
+elif [[ "$OSTYPE" == "cygwin" ]] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+    OS="windows"
+    PYTHON_CMD="python"
 else
-    echo -e "${CYAN}Creando entorno virtual nuevo...${NC}"
-    
-    # Verificar Python 3.12
-    if ! command -v python3.12 &> /dev/null; then
-        echo -e "${RED}Python 3.12 no detectado.${NC}"
-        echo -e "${CYAN}Instalando Python 3.12... (te pedirá contraseña)${NC}"
-        sudo dnf install python3.12 -y
-    else
-        echo -e "${GREEN}✓ Python 3.12 detectado.${NC}"
+    echo -e "${YELLOW}Unknown OS, trying default settings...${NC}"
+    PYTHON_CMD="python3"
+fi
+
+echo -e "${CYAN}Detected OS: $OS${NC}"
+
+# Check Python version
+check_python() {
+    if command -v python3.12 &> /dev/null; then
+        PYTHON_CMD="python3.12"
+        return 0
+    elif command -v python3 &> /dev/null; then
+        # Check if version is 3.11+
+        PY_VERSION=$($PYTHON_CMD --version 2>&1 | grep -oP '\d+\.\d+' | head -1)
+        MAJOR=$(echo $PY_VERSION | cut -d. -f1)
+        MINOR=$(echo $PY_VERSION | cut -d. -f2)
+        
+        if [ "$MAJOR" -eq 3 ] && [ "$MINOR" -ge 11 ]; then
+            return 0
+        fi
+    elif command -v python &> /dev/null; then
+        PYTHON_CMD="python"
+        return 0
     fi
+    return 1
+}
+
+if ! check_python; then
+    echo -e "${RED}Python 3.11+ is required but not found.${NC}"
+    echo ""
+    echo "Please install Python 3.11 or higher:"
+    echo "  • Linux: sudo apt install python3.12 (or use your package manager)"
+    echo "  • macOS: brew install python@3.12"
+    echo "  • Windows: Download from https://python.org/downloads/"
+    echo ""
+    read -p "Press Enter to exit..."
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Python found: $($PYTHON_CMD --version 2>&1)${NC}"
+
+# Check/create virtual environment
+if [ "$OS" == "windows" ]; then
+    VENV_ACTIVATE="$VENV_NAME/Scripts/activate"
+else
+    VENV_ACTIVATE="$VENV_NAME/bin/activate"
+fi
+
+if [ ! -f "$VENV_ACTIVATE" ]; then
+    echo -e "${CYAN}Creating virtual environment...${NC}"
+    $PYTHON_CMD -m venv "$VENV_NAME"
     
-    # Crear entorno virtual
-    python3.12 -m venv "$VENV_NAME"
-    source "$VENV_NAME"/bin/activate
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to create virtual environment${NC}"
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+fi
+
+# Activate virtual environment
+echo -e "${CYAN}Activating virtual environment...${NC}"
+source "$VENV_ACTIVATE"
+
+# Check dependencies
+if ! python -c "import telegram" 2>/dev/null; then
+    echo -e "${YELLOW}Installing dependencies...${NC}"
     
-    # Actualizar pip e instalar dependencias
-    echo -e "${CYAN}Instalando dependencias...${NC}"
     pip install --upgrade pip --quiet
     
     if [ -f "requirements.txt" ]; then
         pip install -r requirements.txt
         if [ $? -ne 0 ]; then
-            echo -e "${RED}Error instalando dependencias${NC}"
+            echo -e "${RED}Failed to install dependencies${NC}"
+            read -p "Press Enter to exit..."
             exit 1
         fi
     else
-        echo -e "${RED}Error: requirements.txt no encontrado${NC}"
+        echo -e "${RED}requirements.txt not found${NC}"
+        read -p "Press Enter to exit..."
         exit 1
     fi
     
-    echo -e "${GREEN}=======================================${NC}"
-    echo -e "${GREEN}   ¡INSTALACIÓN COMPLETADA!            ${NC}"
-    echo -e "${GREEN}=======================================${NC}"
+    echo -e "${GREEN}✓ Dependencies installed!${NC}"
+else
+    echo -e "${GREEN}✓ Dependencies already installed${NC}"
 fi
 
-echo -e ""
-echo -e "${GREEN}🚀 Iniciando LocalBot...${NC}"
-echo -e ""
+echo ""
+echo -e "${GREEN}🚀 Starting LocalBot...${NC}"
+echo ""
 
-# Run the Telegram bot
+# Run the bot
 python src/telegram_bot.py
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    read -p "Press Enter to exit..."
+fi
+
+exit $EXIT_CODE
