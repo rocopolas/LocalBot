@@ -29,6 +29,7 @@ from src.handlers.document import DocumentHandler
 from src.jobs.events import EventsJob
 from src.jobs.inactivity import InactivityJob
 from src.jobs.cleanup import CleanupJob
+from src.jobs.email_digest import EmailDigestJob
 from src.middleware.rate_limiter import rate_limit
 
 from utils.cron_utils import CronUtils
@@ -62,7 +63,9 @@ vector_manager = VectorManager(get_all_config(), OllamaClient())
 message_queue = asyncio.Queue()
 queue_worker_running = False
 last_activity = datetime.now()
-email_digest_running = False
+
+# Initialize email digest job
+email_digest_job = EmailDigestJob(notification_chat_id=NOTIFICATION_CHAT_ID)
 
 # Config values
 MODEL = get_config("MODEL")
@@ -118,7 +121,8 @@ def get_system_prompt():
 command_handlers = CommandHandlers(
     chat_manager=chat_manager,
     is_authorized_func=is_authorized,
-    get_system_prompt_func=get_system_prompt
+    get_system_prompt_func=get_system_prompt,
+    email_digest_job=email_digest_job
 )
 
 voice_handler = VoiceHandler(
@@ -500,6 +504,7 @@ def main():
     application.add_handler(CommandHandler("status", command_handlers.status))
     application.add_handler(CommandHandler("unload", command_handlers.unload_models))
     application.add_handler(CommandHandler("restart", command_handlers.restart_bot))
+    application.add_handler(CommandHandler("digest", command_handlers.email_digest))
     
     # Message handlers
     application.add_handler(MessageHandler(filters.VOICE, voice_handler.handle))
@@ -536,6 +541,15 @@ def main():
         interval=cleanup_job.interval_seconds,
         first=3600
     )
+    
+    # Email digest job - checks every minute if it's 4:00 AM
+    if NOTIFICATION_CHAT_ID:
+        application.job_queue.run_repeating(
+            email_digest_job.run,
+            interval=email_digest_job.interval_seconds,
+            first=60
+        )
+        logger.info("Email digest job scheduled (runs daily at 4:00 AM)")
     
     logger.info("LocalBot started successfully!")
     application.run_polling()

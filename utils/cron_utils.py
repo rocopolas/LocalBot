@@ -20,9 +20,9 @@ class CronUtils:
     # Dangerous characters/patterns that could lead to command injection
     DANGEROUS_PATTERNS = [
         r';\s*rm\s',  # rm after semicolon
-        r';\s*sudo\s',  # sudo after semicolon  
-        r'\|\s*bash',  # pipe to bash
-        r'\|\s*sh\s',  # pipe to sh
+        r';\s*sudo\s',  # sudo after semicolon
+        r'\|\s*bash(?:\s|$)',  # pipe to bash
+        r'\|\s*sh(?:\s|$)',  # pipe to sh
         r'`[^`]+`',  # command substitution with backticks
         r'\$\([^)]+\)',  # command substitution with $()
         r'>\s*/etc/',  # writing to /etc
@@ -73,13 +73,13 @@ class CronUtils:
         if not command or not command.strip():
             return False, "Command cannot be empty"
         
-        command = command.strip()
-        
-        # Check for dangerous patterns
+        # Check for dangerous patterns BEFORE stripping to preserve trailing spaces
         for pattern in CronUtils.DANGEROUS_PATTERNS:
             if re.search(pattern, command, re.IGNORECASE):
                 logger.warning(f"Dangerous pattern detected in command: {pattern}")
                 return False, f"Command contains dangerous pattern: {pattern}"
+        
+        command = command.strip()
         
         # Check for multiple commands (potential injection)
         if ';' in command and not command.startswith('echo'):

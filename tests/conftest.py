@@ -1,4 +1,10 @@
 """Pytest configuration and fixtures for LocalBot tests."""
+import sys
+import os
+
+# Add project root to Python path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, MagicMock

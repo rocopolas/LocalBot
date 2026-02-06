@@ -12,7 +12,6 @@ CRON_CLEANUP_INTERVAL_MINUTES: 30
 TIMEZONE_OFFSET_HOURS: -3  
 EVENTS_FILE: "data/events.txt"
 INSTRUCTIONS_FILE: "data/instructions.md"
-MEMORY_FILE: "data/memory.md"
 
 # Luces WIZ (nombre: IP o lista de IPs)
 WIZ_LIGHTS:

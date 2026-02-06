@@ -75,9 +75,9 @@ class TestEscapeMarkdown:
         """Test escaping of special markdown characters."""
         text = "_test_ *test* [test]"
         result = escape_markdown(text)
-        assert "\_test\_" in result
-        assert "\*test\*" in result
-        assert "\[test\]" in result
+        assert r"\_test\_" in result
+        assert r"\*test\*" in result
+        assert r"\[test\]" in result
     
     def test_no_change_for_normal_text(self):
         """Test that normal text isn't changed."""

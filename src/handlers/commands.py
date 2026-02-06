@@ -21,11 +21,13 @@ class CommandHandlers:
         self,
         chat_manager: ChatManager,
         is_authorized_func,
-        get_system_prompt_func
+        get_system_prompt_func,
+        email_digest_job=None
     ):
         self.chat_manager = chat_manager
         self.is_authorized = is_authorized_func
         self.get_system_prompt = get_system_prompt_func
+        self.email_digest_job = email_digest_job
     
     @rate_limit(max_messages=5, window_seconds=60)
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -185,3 +187,26 @@ class CommandHandlers:
         
         # Restart the process
         os.execl(sys.executable, sys.executable, *sys.argv)
+    
+    @rate_limit(max_messages=1, window_seconds=60)
+    async def email_digest(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /digest command - manually trigger email digest."""
+        user_id = update.effective_user.id
+        chat_id = update.effective_chat.id
+        
+        if not self.is_authorized(user_id):
+            await update.message.reply_text(
+                f"⛔ No tienes acceso.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        if not self.email_digest_job:
+            await update.message.reply_text(
+                "⚠️ El sistema de email digest no está disponible.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        logger.info(f"Manual email digest triggered by user {user_id}")
+        await self.email_digest_job.run_manual(context, chat_id)
