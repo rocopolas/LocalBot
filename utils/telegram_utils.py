@@ -56,6 +56,9 @@ def format_bot_response(
     # Esto maneja tanto bloques $$...$$ como inline $...$ de forma segura
     formatted = format_math_for_telegram(formatted)
     
+    # Convertir Markdown headers (# Title) a Negrita (*Title*)
+    formatted = re.sub(r'^(?:#{1,6})\s+(.+)$', r'*\1*', formatted, flags=re.MULTILINE)
+    
     return formatted.strip()
 
 
