@@ -113,7 +113,7 @@ FemtoBot/
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/your-username/FemtoBot.git
+git clone https://github.com/rocopolas/FemtoBot.git
 cd FemtoBot
 ```
 
