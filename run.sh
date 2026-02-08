@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# LocalBot Universal Launcher
+# FemtoBot Universal Launcher
 # Works on Linux, macOS, and Windows (Git Bash/WSL)
 
 # Colors for output
@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 VENV_NAME="venv_bot"
 
-echo -e "${CYAN}=== LocalBot Universal Launcher ===${NC}"
+echo -e "${CYAN}=== FemtoBot Universal Launcher ===${NC}"
 
 # Detect OS
 OS="unknown"
@@ -114,7 +114,7 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}🚀 Starting LocalBot...${NC}"
+echo -e "${GREEN}🚀 Starting FemtoBot...${NC}"
 echo ""
 
 # Run the bot

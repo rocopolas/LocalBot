@@ -1,4 +1,4 @@
-"""Email digest background job for LocalBot."""
+"""Email digest background job for FemtoBot."""
 import os
 import logging
 from datetime import datetime

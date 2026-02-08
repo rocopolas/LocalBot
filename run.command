@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# LocalBot macOS Launcher
-# This script sets up and runs LocalBot on macOS
+# FemtoBot macOS Launcher
+# This script sets up and runs FemtoBot on macOS
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 VENV_NAME="venv_bot"
 PYTHON_CMD="python3"
 
-echo -e "${CYAN}=== LocalBot - macOS Setup ===${NC}"
+echo -e "${CYAN}=== FemtoBot - macOS Setup ===${NC}"
 
 # Check if Python 3.12+ is available
 check_python() {
@@ -88,7 +88,7 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}🚀 Starting LocalBot...${NC}"
+echo -e "${GREEN}🚀 Starting FemtoBot...${NC}"
 echo ""
 
 # Run the bot

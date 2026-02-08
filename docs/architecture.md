@@ -1,8 +1,8 @@
-# LocalBot Architecture
+# FemtoBot Architecture
 
 ## Overview
 
-LocalBot is a privacy-focused AI assistant that runs locally using Ollama LLM. It provides two interfaces:
+FemtoBot is a privacy-focused AI assistant that runs locally using Ollama LLM. It provides two interfaces:
 - **Telegram Bot**: Primary interface for mobile/desktop messaging
 - **TUI (Terminal User Interface)**: Desktop terminal interface using Textual
 
@@ -49,7 +49,7 @@ LocalBot is a privacy-focused AI assistant that runs locally using Ollama LLM. I
 ## Project Structure
 
 ```
-LocalBot/
+FemtoBot/
 ├── src/                        # Main source code
 │   ├── __init__.py
 │   ├── constants.py           # Global constants

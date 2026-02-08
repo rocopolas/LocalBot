@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for LocalBot tests."""
+"""Pytest configuration and fixtures for FemtoBot tests."""
 import sys
 import os
 

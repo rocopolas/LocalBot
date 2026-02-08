@@ -1,4 +1,4 @@
-"""Ollama API client for LocalBot with streaming support."""
+"""Ollama API client for FemtoBot with streaming support."""
 import httpx
 import json
 import logging

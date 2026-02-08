@@ -2,7 +2,7 @@
 
 ## Overview
 
-The TUI provides a terminal-based interface for LocalBot with full feature parity to the Telegram bot.
+The TUI provides a terminal-based interface for FemtoBot with full feature parity to the Telegram bot.
 
 ## Features
 
@@ -78,7 +78,7 @@ src/
 
 **TUISlashCommands**: Handles slash commands for TUI-specific features.
 
-**LocalBotApp**: Main Textual application integrating all components.
+**FemtoBotApp**: Main Textual application integrating all components.
 
 ## Data Storage
 

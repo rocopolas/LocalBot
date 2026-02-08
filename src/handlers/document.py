@@ -1,4 +1,4 @@
-"""Document handler for LocalBot."""
+"""Document handler for FemtoBot."""
 import os
 import asyncio
 import tempfile

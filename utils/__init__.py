@@ -1,1 +1,1 @@
-# LocalBot utilities package
+# FemtoBot utilities package

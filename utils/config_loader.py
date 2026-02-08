@@ -1,4 +1,4 @@
-"""Configuration loader for LocalBot with validation and caching."""
+"""Configuration loader for FemtoBot with validation and caching."""
 import yaml
 import os
 import logging

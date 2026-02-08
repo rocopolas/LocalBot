@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM LocalBot Windows Launcher
-REM This script sets up and runs LocalBot on Windows
+REM FemtoBot Windows Launcher
+REM This script sets up and runs FemtoBot on Windows
 
 set "VENV_NAME=venv_bot"
 set "PYTHON_CMD=python"
@@ -31,7 +31,7 @@ if errorlevel 1 (
 )
 
 echo ===================================
-echo   LocalBot - Windows Setup
+echo   FemtoBot - Windows Setup
 echo ===================================
 
 REM Check if virtual environment exists
@@ -78,7 +78,7 @@ if errorlevel 1 (
 
 echo.
 echo ===================================
-echo   Starting LocalBot...
+echo   Starting FemtoBot...
 echo ===================================
 echo.
 

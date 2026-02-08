@@ -1,4 +1,4 @@
-"""Main TUI application for LocalBot - Refactored version."""
+"""Main TUI application for FemtoBot - Refactored version."""
 from textual.app import App, ComposeResult
 from textual.containers import ScrollableContainer, Vertical
 from textual.widgets import Input, Header, Footer, Static, Markdown
@@ -9,7 +9,11 @@ import logging
 from datetime import datetime
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory to path
+import os
+import sys
+_ABS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ABS_ROOT)
 
 from src.constants import PROJECT_ROOT
 from src.state.chat_manager import ChatManager
@@ -66,11 +70,11 @@ class MessageWidget(Markdown):
         await super().update(self.format_content(content))
 
 
-class LocalBotApp(App):
+class FemtoBotApp(App):
     """Main TUI application."""
     
     CSS_PATH = os.path.join(PROJECT_ROOT, "assets", "styles.tcss")
-    TITLE = "LocalBot TUI"
+    TITLE = "FemtoBot TUI"
     SUB_TITLE = "Powered by Ollama"
     
     def __init__(self):
@@ -154,7 +158,7 @@ class LocalBotApp(App):
         
         # Show welcome message
         self._output_message(
-            "🤖 LocalBot TUI iniciado\n"
+            "🤖 FemtoBot TUI iniciado\n"
             "Escribe /help para ver comandos disponibles",
             "info"
         )
@@ -188,7 +192,7 @@ class LocalBotApp(App):
         if self.vision_model:
             await self.client.unload_model(self.vision_model)
         
-        logger.info("LocalBot TUI shutdown complete")
+        logger.info("FemtoBot TUI shutdown complete")
 
     async def on_input_submitted(self, event: Input.Submitted):
         """Handle user input."""
@@ -306,5 +310,5 @@ import asyncio
 
 
 if __name__ == "__main__":
-    app = LocalBotApp()
+    app = FemtoBotApp()
     app.run()

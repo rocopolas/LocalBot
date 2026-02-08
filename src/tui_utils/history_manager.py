@@ -169,7 +169,7 @@ class TUIHistoryManager:
                 return False
             
             with open(export_path, 'w', encoding='utf-8') as f:
-                f.write(f"# LocalBot TUI Conversation Export\n\n")
+                f.write(f"# FemtoBot TUI Conversation Export\n\n")
                 f.write(f"**Session:** {session_id}\n")
                 f.write(f"**Exported:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
                 f.write("---\n\n")

@@ -1,4 +1,4 @@
-"""Cron utility module with command sanitization for LocalBot."""
+"""Cron utility module with command sanitization for FemtoBot."""
 import subprocess
 import shutil
 import re

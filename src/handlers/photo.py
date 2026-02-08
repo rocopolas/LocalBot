@@ -1,4 +1,4 @@
-"""Photo/image handler for LocalBot."""
+"""Photo/image handler for FemtoBot."""
 import os
 import base64
 import tempfile

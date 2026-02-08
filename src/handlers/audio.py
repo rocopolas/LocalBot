@@ -1,4 +1,4 @@
-"""Audio file handler for LocalBot."""
+"""Audio file handler for FemtoBot."""
 import os
 import tempfile
 from contextlib import suppress

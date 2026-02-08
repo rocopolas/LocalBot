@@ -1,4 +1,4 @@
-"""Voice message handler for LocalBot."""
+"""Voice message handler for FemtoBot."""
 import os
 import tempfile
 from contextlib import suppress

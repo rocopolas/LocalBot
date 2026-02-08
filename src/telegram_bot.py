@@ -1,4 +1,4 @@
-"""Main Telegram bot for LocalBot - Refactored modular version."""
+"""Main Telegram bot for FemtoBot - Refactored modular version."""
 import os
 import re
 import sys
@@ -14,8 +14,12 @@ from telegram.ext import (
 from telegram.error import BadRequest
 
 # Add parent directory to path
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT_ROOT)
+# Add parent directory to path
+_ABS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ABS_ROOT)
+
+# Use relative path for application logic
+PROJECT_ROOT = os.path.relpath(_ABS_ROOT, os.getcwd())
 
 # Import modular components
 from src.state.chat_manager import ChatManager
@@ -478,7 +482,7 @@ def main():
         )
         logger.info("Email digest job scheduled (runs daily at 4:00 AM)")
     
-    logger.info("LocalBot started successfully!")
+    logger.info("FemtoBot started successfully!")
     application.run_polling()
 
 

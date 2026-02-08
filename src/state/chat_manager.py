@@ -1,4 +1,4 @@
-"""Thread-safe chat state manager for LocalBot."""
+"""Thread-safe chat state manager for FemtoBot."""
 import asyncio
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta

@@ -1,4 +1,4 @@
-# 🤖 LocalBot
+# 🤖 FemtoBot
 
 A smart personal assistant that runs locally using [Ollama](https://ollama.ai). Available as a Telegram bot and TUI interface.
 
@@ -19,9 +19,9 @@ A smart personal assistant that runs locally using [Ollama](https://ollama.ai). 
 - 💡 **Smart lights** - Control WIZ lights via chat
 - 🧮 **Math solver** - Solve complex equations and symbolic math problems
 
-## 🤔 Why LocalBot?
+## 🤔 Why FemtoBot?
 
-| | LocalBot | Cloud Bots (Claude, GPT) |
+| | FemtoBot | Cloud Bots (Claude, GPT) |
 |---|---|---|
 | 💰 **Cost** | **Free** | $20+/month or pay per use |
 | 🔒 **Privacy** | Your data never leaves your PC | Your chats go to external servers |
@@ -38,7 +38,7 @@ A smart personal assistant that runs locally using [Ollama](https://ollama.ai). 
 
 ## 📁 Project Structure
 
-LocalBot/
+FemtoBot/
 ├── config.yaml              # Main configuration
 ├── .env                     # Environment variables (tokens)
 ├── requirements.txt         # Python dependencies
@@ -113,8 +113,8 @@ LocalBot/
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/your-username/LocalBot.git
-cd LocalBot
+git clone https://github.com/your-username/FemtoBot.git
+cd FemtoBot
 ```
 
 2. **Run the bot (auto-setup):**

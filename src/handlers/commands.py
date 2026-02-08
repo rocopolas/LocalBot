@@ -1,4 +1,4 @@
-"""Command handlers for LocalBot."""
+"""Command handlers for FemtoBot."""
 import os
 import sys
 from telegram import Update
@@ -47,7 +47,7 @@ class CommandHandlers:
         await self.chat_manager.initialize_chat(chat_id, system_prompt)
         
         await update.message.reply_text(
-            "¡Hola! Soy LocalBot en Telegram. Háblame y te responderé."
+            "¡Hola! Soy FemtoBot en Telegram. Háblame y te responderé."
         )
         logger.info(f"Chat {chat_id} started by user {user_id}")
     
