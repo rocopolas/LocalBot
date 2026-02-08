@@ -38,7 +38,6 @@ A smart personal assistant that runs locally using [Ollama](https://ollama.ai). 
 
 ## 📁 Project Structure
 
-```
 LocalBot/
 ├── config.yaml              # Main configuration
 ├── .env                     # Environment variables (tokens)
@@ -46,12 +45,16 @@ LocalBot/
 ├── run.sh                   # Run script (setup + run)
 │
 ├── src/                     # Source code
-│   ├── telegram_bot.py      # Main Telegram bot
+│   ├── telegram_bot.py      # Main Telegram bot (Entry Point)
 │   ├── tui.py              # TUI interface
 │   ├── client.py           # Ollama client
 │   ├── constants.py        # Global constants
+│   ├── services/           # Business Logic Services
+│   │   ├── rag_service.py      # RAG & Context Management
+│   │   ├── media_service.py    # Twitter/YouTube handling
+│   │   └── command_service.py  # Internal bot commands
 │   ├── handlers/           # Message handlers
-│   │   ├── commands.py     # Bot commands
+│   │   ├── commands.py     # Bot slash commands
 │   │   ├── voice.py        # Voice messages
 │   │   ├── audio.py        # Audio files
 │   │   ├── photo.py        # Images
@@ -59,11 +62,14 @@ LocalBot/
 │   ├── jobs/               # Background jobs
 │   │   ├── events.py       # Event notifications
 │   │   ├── inactivity.py   # Auto-unload models
-│   │   └── cleanup.py      # Cleanup old data
+│   │   ├── cleanup.py      # Cleanup old data
+│   │   └── email_digest.py # Email summary
 │   ├── middleware/         # Middleware
 │   │   └── rate_limiter.py # Rate limiting
-│   └── state/              # State management
-│       └── chat_manager.py # Chat history
+│   ├── state/              # State management
+│   │   └── chat_manager.py # Chat history
+│   └── memory/             # Long-term Memory
+│       └── vector_store.py # ChromaDB wrapper
 │
 ├── utils/                   # Utility modules
 │   ├── audio_utils.py       # Whisper transcription

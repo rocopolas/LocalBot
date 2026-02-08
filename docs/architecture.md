@@ -57,6 +57,10 @@ LocalBot/
 │   ├── client.py              # Ollama API client
 │   ├── tui.py                 # Terminal UI
 │   ├── main.py                # TUI entry point
+│   ├── services/              # Business Logic Services
+│   │   ├── rag_service.py     # RAG & Context Management
+│   │   ├── media_service.py   # Twitter/YouTube handling
+│   │   └── command_service.py # Internal bot commands
 │   ├── handlers/              # Telegram handlers
 │   │   ├── base.py
 │   │   ├── commands.py
@@ -68,11 +72,14 @@ LocalBot/
 │   │   ├── base.py
 │   │   ├── events.py
 │   │   ├── inactivity.py
-│   │   └── cleanup.py
+│   │   ├── cleanup.py
+│   │   └── email_digest.py
 │   ├── middleware/            # Middleware
 │   │   └── rate_limiter.py
-│   └── state/                 # State management
-│       └── chat_manager.py
+│   ├── state/                 # State management
+│   │   └── chat_manager.py
+│   └── memory/                # Long-term Memory
+│       └── vector_store.py
 ├── utils/                      # Utility modules
 │   ├── config_loader.py
 │   ├── cron_utils.py

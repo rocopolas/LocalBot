@@ -227,13 +227,16 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
     placeholder_msg = None
     
     # --- MEDIA SERVICE HANDLING ---
-    if media_service.is_media_url(user_text):
-        # Twitter
-        twitter_res = await media_service.process_twitter(user_text)
-        if twitter_res:
-            media_path, media_type = twitter_res
+    media_action = media_service.identify_action(user_text)
+    if media_action:
+        platform, action_type, url = media_action
+        
+        if platform == 'twitter':
             status_msg = await context.bot.send_message(chat_id, "🐦 Procesando Twitter...")
             try:
+                await status_msg.edit_text("📤 Descargando...")
+                media_path, media_type = await media_service.process_twitter(url)
+                
                 await status_msg.edit_text("📤 Subiendo...")
                 with open(media_path, 'rb') as f:
                     if media_type == 'photo':
@@ -248,13 +251,13 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                 await status_msg.edit_text(f"❌ Error: {str(e)}")
                 return
 
-        # YouTube
-        youtube_res = await media_service.process_youtube(user_text)
-        if youtube_res:
-            if len(youtube_res) == 2: # Video download
-                video_path, _ = youtube_res
-                status_msg = await context.bot.send_message(chat_id, "🎥 Descargando video...")
+        elif platform == 'youtube':
+            if action_type == 'download_video':
+                status_msg = await context.bot.send_message(chat_id, "🎥 Iniciando descarga...")
                 try:
+                    await status_msg.edit_text("⬇️ Descargando video...")
+                    video_path = await media_service.download_youtube(url)
+                    
                     await status_msg.edit_text("📤 Subiendo...")
                     with open(video_path, 'rb') as f:
                         await context.bot.send_video(chat_id, video=f)
@@ -265,17 +268,25 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                 except Exception as e:
                     await status_msg.edit_text(f"❌ Error: {str(e)}")
                     return
-            elif len(youtube_res) == 3: # Transcription
-                transcription, _, video_title = youtube_res
-                status_msg = await context.bot.send_message(chat_id, f"🎙️ Transcribiendo: _{video_title}_...")
-                
-                # Update user text with transcription request
-                user_text = (
-                    f"Analiza esta transcripción de YouTube '{video_title}':\n\n"
-                    f"\"\"\"\n{transcription}\n\"\"\"\n\n"
-                    f"Haz un resumen detallado."
-                )
-                placeholder_msg = status_msg
+                    
+            elif action_type == 'transcribe':
+                status_msg = await context.bot.send_message(chat_id, "🎙️ Analizando video para transcribir...")
+                try:
+                    # Perform transcription
+                    transcription, video_title = await media_service.transcribe_youtube(url)
+                    
+                    await status_msg.edit_text(f"✅ Transcripción de '_{video_title}_' completada. Analizando...")
+                    
+                    # Update user text with transcription request for the LLM
+                    user_text = (
+                        f"Analiza esta transcripción de YouTube '{video_title}':\n\n"
+                        f"\"\"\"\n{transcription}\n\"\"\"\n\n"
+                        f"Haz un resumen detallado."
+                    )
+                    placeholder_msg = status_msg
+                except Exception as e:
+                    await status_msg.edit_text(f"❌ Error: {str(e)}")
+                    return
 
     # --- LLM + RAG ---
     
