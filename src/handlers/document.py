@@ -1,5 +1,6 @@
 """Document handler for LocalBot."""
 import os
+import asyncio
 import tempfile
 from contextlib import suppress
 from telegram import Update
@@ -11,8 +12,8 @@ from src.client import OllamaClient
 from src.state.chat_manager import ChatManager
 from src.middleware.rate_limiter import rate_limit
 from utils.config_loader import get_config
-from utils.telegram_utils import format_bot_response, split_message, prune_history
-from utils.document_utils import extract_text_from_document, is_supported_document
+from utils.telegram_utils import format_bot_response, split_message, prune_history, format_math_for_telegram
+from utils.document_utils import extract_text_from_document, is_supported_document, convert_pdf_to_images
 
 logger = logging.getLogger(__name__)
 
@@ -73,20 +74,50 @@ class DocumentHandler:
                 tmp_path = tmp.name
             
             # Extract text
-            doc_text, doc_type = extract_text_from_document(tmp_path, file_name)
+            doc_text, doc_type, needs_ocr = await extract_text_from_document(tmp_path, file_name)
+            
+            # OCR Fallback
+            if needs_ocr and doc_type == "PDF":
+                ocr_model = get_config("OCR_MODEL", "glm-4v")
+                await status_msg.edit_text(f"👁️ Documento escaneado detectado. Iniciando OCR con {ocr_model}...")
+                try:
+                    images_b64 = await asyncio.to_thread(convert_pdf_to_images, tmp_path)
+                    if images_b64:
+                         client = OllamaClient()
+                         ocr_texts = []
+                         for i, img_b64 in enumerate(images_b64):
+                             await status_msg.edit_text(f"👁️ OCR: Procesando página {i+1}/{len(images_b64)}...")
+                             # Prompt for OCR
+                             page_text = await client.describe_image(
+                                 model=ocr_model,
+                                 image_base64=img_b64,
+                                 prompt="Transcribe all text from this image exactly as it appears. Do not add commentary. Output only the text."
+                             )
+                             ocr_texts.append(page_text)
+                         
+                         doc_text = "\n\n".join(ocr_texts)
+                         doc_type += " (OCR)"
+                    else:
+                         doc_text += "\n[Advertencia: Documento escaneado pero no se pudieron extraer imágenes]"
+                except Exception as e:
+                    logger.error(f"OCR Error: {e}")
+                    doc_text += f"\n[Error OCR: {str(e)}]"
             
             # Clean up temp file
             with suppress(FileNotFoundError, PermissionError, OSError):
                 os.unlink(tmp_path)
             
-            # Check if extraction failed
-            if doc_text.startswith("[Error"):
+            # Check if extraction and OCR failed
+            if doc_text.startswith("[Error") and not needs_ocr:
                 await status_msg.edit_text(doc_text)
                 return
             
+            # Apply Math Formatting (LaTeX to Unicode/Markdown)
+            doc_text = format_math_for_telegram(doc_text)
+            
             # Truncate if too long
-            if len(doc_text) > 50000:
-                doc_text = doc_text[:50000] + "\n\n[... documento truncado por longitud ...]"
+            if len(doc_text) > 100000:
+                doc_text = doc_text[:100000] + "\n\n[... documento truncado por longitud ...]"
             
             # Index to Vector Store
             from datetime import datetime

@@ -275,9 +275,14 @@ pytest tests/ --cov=src --cov=utils
   - "Find the roots of 2x^2 + 5x - 3 = 0"
   - "Calculate the eigenvalues of the matrix..."
 
-### 📄 Document Reading
-- Send a PDF, DOCX, or TXT file → Bot extracts text and responds
-- Send document + caption → Bot considers both for response
+### 📄 Document Reading & OCR
+- Send a PDF, DOCX, or TXT file → Bot extracts text and responds.
+- **Automatic OCR**: If the document is scanned (text density < 15 words/page), the bot automatically:
+  1. Converts pages to high-res images.
+  2. Uses the Vision Model (`glm-4v` by default) to read the content.
+  3. Formats **Mathematical Formulas** (LaTeX) into readable text (e.g., converts `$x^2$` to `x²`).
+- **Math Support**: Detects and beautifully renders complex math formulas from academic papers.
+- Send document + caption → Bot considers both for response.
 
 ### ⏰ Reminders
 Ask the bot things like:

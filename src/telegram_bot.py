@@ -35,7 +35,7 @@ from src.middleware.rate_limiter import rate_limit
 
 from utils.cron_utils import CronUtils
 from utils.config_loader import get_config, get_all_config
-from utils.telegram_utils import split_message, format_bot_response, escape_markdown, prune_history
+from utils.telegram_utils import split_message, format_bot_response, escape_markdown, prune_history, format_math_for_telegram
 from utils.youtube_utils import is_youtube_url, download_youtube_audio, get_video_title
 from utils.twitter_utils import is_twitter_url, download_twitter_video, get_twitter_media_url
 from utils.search_utils import BraveSearch
@@ -180,69 +180,7 @@ async def queue_worker():
 voice_handler.queue_worker = queue_worker
 
 
-def _format_math_for_telegram(text: str) -> str:
-    """Format math response for Telegram Markdown compatibility."""
-    import re
-    
-    # Remove LaTeX delimiters \( \) and replace with backticks
-    text = re.sub(r'\\\((.*?)\\\)', r'`\1`', text)
-    
-    # Remove LaTeX delimiters \[ \] and format as code block
-    text = re.sub(r'\\\[(.*?)\\\]', r'```\n\1\n```', text, flags=re.DOTALL)
-    
-    # Remove \boxed{} and format as bold
-    text = re.sub(r'\\boxed\{(.*?)\}', r'*\1*', text)
-    
-    # Convert common LaTeX commands to readable format
-    replacements = {
-        r'\\cdot': '·',
-        r'\\times': '×',
-        r'\\div': '÷',
-        r'\\pm': '±',
-        r'\\mp': '∓',
-        r'\\leq': '≤',
-        r'\\geq': '≥',
-        r'\\neq': '≠',
-        r'\\approx': '≈',
-        r'\\equiv': '≡',
-        r'\\infty': '∞',
-        r'\\infty': '∞',
-        r'\\sum': 'Σ',
-        r'\\prod': 'Π',
-        r'\\int': '∫',
-        r'\\sqrt': '√',
-        r'\\alpha': 'α',
-        r'\\beta': 'β',
-        r'\\gamma': 'γ',
-        r'\\delta': 'δ',
-        r'\\epsilon': 'ε',
-        r'\\theta': 'θ',
-        r'\\lambda': 'λ',
-        r'\\mu': 'μ',
-        r'\\pi': 'π',
-        r'\\sigma': 'σ',
-        r'\\phi': 'φ',
-        r'\\omega': 'ω',
-        r'\\rightarrow': '→',
-        r'\\leftarrow': '←',
-        r'\\Rightarrow': '⇒',
-        r'\\Leftarrow': '⇐',
-        r'\\frac\{([^}]+)\}\{([^}]+)\}': r'(\1)/(\2)',
-        r'\\text\{([^}]+)\}': r'\1',
-        r'\^\{([^}]+)\}': r'^\1',
-        r'_\{([^}]+)\}': r'_\1',
-    }
-    
-    for pattern, replacement in replacements.items():
-        text = re.sub(pattern, replacement, text)
-    
-    # Clean up any remaining LaTeX backslashes before special chars
-    text = re.sub(r'\\([a-zA-Z]+)', r'\1', text)
-    
-    # Ensure numbered lists use proper format
-    text = re.sub(r'^(\d+)\.\s+', r'\1\. ', text, flags=re.MULTILINE)
-    
-    return text.strip()
+
 
 
 @rate_limit(max_messages=10, window_seconds=60)
@@ -430,7 +368,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                 full_response += chunk
             
             # Process math response for Telegram Markdown
-            full_response = _format_math_for_telegram(full_response)
+            full_response = format_math_for_telegram(full_response)
             
             # Unload math model after use
             await client.unload_model(MATH_MODEL)
@@ -684,7 +622,8 @@ def main():
         application.job_queue.run_repeating(
             events_job.run,
             interval=events_job.interval_seconds,
-            first=1
+            first=1,
+            name=events_job.name
         )
     
     inactivity_job = InactivityJob(
@@ -694,14 +633,16 @@ def main():
     application.job_queue.run_repeating(
         inactivity_job.run,
         interval=inactivity_job.interval_seconds,
-        first=300
+        first=300,
+        name=inactivity_job.name
     )
     
     cleanup_job = CleanupJob(chat_manager=chat_manager)
     application.job_queue.run_repeating(
         cleanup_job.run,
         interval=cleanup_job.interval_seconds,
-        first=3600
+        first=3600,
+        name=cleanup_job.name
     )
     
     # Email digest job - checks every minute if it's 4:00 AM
@@ -709,7 +650,8 @@ def main():
         application.job_queue.run_repeating(
             email_digest_job.run,
             interval=email_digest_job.interval_seconds,
-            first=60
+            first=60,
+            name=email_digest_job.name
         )
         logger.info("Email digest job scheduled (runs daily at 4:00 AM)")
     

@@ -4,6 +4,7 @@
 MODEL: "qwen3:8b"
 VISION_MODEL: "qwen3-vl:2b"
 MATH_MODEL: "qwen2-math:7b"
+OCR_MODEL: "glm-ocr:latest" # Model for OCR (e.g. glm-ocr, llama3.2-vision)
 CONTEXT_LIMIT: 30000
 WHISPER_LANGUAGE: "es"
 WHISPER_MODEL_VOICE: "turbo"

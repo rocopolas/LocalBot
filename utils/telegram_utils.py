@@ -48,9 +48,13 @@ def format_bot_response(
         formatted = re.sub(r':::search(?::)?\s*.+?:::', '', formatted)
         formatted = re.sub(r':::foto(?::)?\s*.+?:::', '', formatted, flags=re.IGNORECASE)
         
-        # Comandos de dispositivos
+    # Comandos de dispositivos
         formatted = re.sub(r':::luz(?::)?\s*.+?:::', '', formatted, flags=re.IGNORECASE)
         formatted = re.sub(r':::camara(?::)?(?:\s+\S+)?:::', '', formatted)
+    
+    # Formatear matemáticas (LaTeX -> Unicode/Markdown)
+    # Esto maneja tanto bloques $$...$$ como inline $...$ de forma segura
+    formatted = format_math_for_telegram(formatted)
     
     return formatted.strip()
 
@@ -195,3 +199,87 @@ def prune_history(history: list, max_tokens: int = 30000) -> list:
         current_usage += msg_len
     
     return system_msgs + list(reversed(kept_msgs))
+
+
+def format_math_for_telegram(text: str) -> str:
+    """Format math response for Telegram Markdown compatibility."""
+    import re
+    
+    # Remove LaTeX delimiters \( \) and replace with backticks
+    text = re.sub(r'\\\((.*?)\\\)', r'`\1`', text)
+    
+    # Remove LaTeX delimiters \[ \] and format as code block
+    text = re.sub(r'\\\[(.*?)\\\]', r'```\n\1\n```', text, flags=re.DOTALL)
+    
+    # Handle standard LaTeX delimiters $...$ and $$...$$
+    # Block math $$...$$
+    text = re.sub(r'\$\$(.*?)\$\$', r'```\n\1\n```', text, flags=re.DOTALL)
+    
+    # Inline math $...$
+    # Regex: Match $...$ but avoid simple currency like $100 or $ 100
+    # Logic: Lookahead ensures content doesn't start with (optional space + digit)
+    # This allows $ p(x) $ but blocks $ 100
+    text = re.sub(r'(?<!\$)\$(?!\$)(?!\s*\d)(.*?)(?<!\$)\$(?!\$)', r'`\1`', text)
+    
+    # Remove \boxed{} and format as bold
+    text = re.sub(r'\\boxed\{(.*?)\}', r'*\1*', text)
+    
+    # Convert common LaTeX commands to readable format
+    replacements = {
+        r'\\cdot': '·',
+        r'\\times': '×',
+        r'\\div': '÷',
+        r'\\pm': '±',
+        r'\\mp': '∓',
+        r'\\leq': '≤',
+        r'\\geq': '≥',
+        r'\\neq': '≠',
+        r'\\approx': '≈',
+        r'\\equiv': '≡',
+        r'\\infty': '∞',
+        r'\\sum': 'Σ',
+        r'\\prod': 'Π',
+        r'\\int': '∫',
+        r'\\sqrt': '√',
+        r'\\alpha': 'α',
+        r'\\beta': 'β',
+        r'\\gamma': 'γ',
+        r'\\delta': 'δ',
+        r'\\epsilon': 'ε',
+        r'\\theta': 'θ',
+        r'\\lambda': 'λ',
+        r'\\mu': 'μ',
+        r'\\pi': 'π',
+        r'\\sigma': 'σ',
+        r'\\phi': 'φ',
+        r'\\omega': 'ω',
+        r'\\rightarrow': '→',
+        r'\\leftarrow': '←',
+        r'\\Rightarrow': '⇒',
+        r'\\Leftarrow': '⇐',
+        # Complex replacements
+        r'\\frac\{([^}]+)\}\{([^}]+)\}': r'(\1)/(\2)',
+        r'\\text\{([^}]+)\}': r'\1',
+        r'\^\{([^}]+)\}': r'^\1',
+        r'_\{([^}]+)\}': r'_\1',
+        # Clean specific artifacts
+        r'\\left': '',
+        r'\\right': '',
+        r'\\quad': ' ',
+        r'\\ ': ' ',
+    }
+    
+    for pattern, replacement in replacements.items():
+        text = re.sub(pattern, replacement, text)
+    
+    # Clean up any remaining LaTeX backslashes before special chars
+    text = re.sub(r'\\([a-zA-Z]+)', r'\1', text)
+    
+    # Fix double asterisks **bold** -> *bold* for Telegram
+    text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text)
+
+    
+    # Ensure numbered lists use proper format
+    text = re.sub(r'^(\d+)\.\s+', r'\1\. ', text, flags=re.MULTILINE)
+    
+    return text.strip()
