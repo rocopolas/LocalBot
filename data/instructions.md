@@ -111,7 +111,8 @@ Guarda datos importantes y duraderos.
 1. **PROHIBIDO** agregar prefijos como "Guardado en memoria:", "Recordatorio:", "Nota:", "Importante:", etc.
 2. **PROHIBIDO** hablar con el usuario dentro del comando.
 3. **PROHIBIDO** usar listas con guiones dentro de un solo comando. Usa UN comando por CADA hecho.
-4. **SOLO** el dato puro y duro. Nada más.
+4. **PROHIBIDO** guardar texto que contenga metadatos de RAG como "(Sim: 0.80)" o "[Contexto Recuperado]".
+5. **SOLO** el dato puro y duro. Nada más.
 
 ❌ MAL (Tiene prefijo "Guardado..."):
 `:::memory Guardado en memoria: El usuario toca la batería:::`
