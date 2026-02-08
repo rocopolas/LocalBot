@@ -35,7 +35,7 @@ from src.middleware.rate_limiter import rate_limit
 
 from utils.cron_utils import CronUtils
 from utils.config_loader import get_config, get_all_config
-from utils.telegram_utils import split_message, format_bot_response, escape_markdown, prune_history, format_math_for_telegram, telegramify_content, send_telegramify_results
+from utils.telegram_utils import split_message, format_bot_response, escape_markdown, prune_history, telegramify_content, send_telegramify_results
 from utils.youtube_utils import is_youtube_url, download_youtube_audio, get_video_title
 from utils.twitter_utils import is_twitter_url, download_twitter_video, get_twitter_media_url
 from utils.search_utils import BraveSearch
@@ -367,8 +367,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             async for chunk in client.stream_chat(MATH_MODEL, math_messages):
                 full_response += chunk
             
-            # Process math response for Telegram Markdown
-            full_response = format_math_for_telegram(full_response)
+            # LaTeX math is handled automatically by telegramify-markdown
             
             # Unload math model after use
             await client.unload_model(MATH_MODEL)

@@ -12,7 +12,7 @@ from src.client import OllamaClient
 from src.state.chat_manager import ChatManager
 from src.middleware.rate_limiter import rate_limit
 from utils.config_loader import get_config
-from utils.telegram_utils import format_bot_response, split_message, prune_history, format_math_for_telegram, telegramify_content, send_telegramify_results
+from utils.telegram_utils import format_bot_response, split_message, prune_history, telegramify_content, send_telegramify_results
 from utils.document_utils import extract_text_from_document, is_supported_document, convert_pdf_to_images
 
 logger = logging.getLogger(__name__)
@@ -112,8 +112,7 @@ class DocumentHandler:
                 await status_msg.edit_text(doc_text)
                 return
             
-            # Apply Math Formatting (LaTeX to Unicode/Markdown)
-            doc_text = format_math_for_telegram(doc_text)
+            # LaTeX math is handled automatically by telegramify-markdown
             
             # Truncate if too long
             if len(doc_text) > 100000:

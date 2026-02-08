@@ -2,22 +2,6 @@ import re
 from typing import List
 
 
-def format_math_for_telegram(text: str) -> str:
-    """Convierte bloques de matemáticas LaTeX al formato de Telegram."""
-    # Patrones para bloques de matemáticas - usando lambdas para evitar errores de regex
-    patterns = [
-        (r'\$\$(.*?)\$\$', lambda m: f'\n{m.group(1)}\n'),  # $$...$$
-        (r'\\\[(.*?)\\\]', lambda m: f'\n{m.group(1)}\n'),     # \[...\]
-        (r'\$(.*?)\$', lambda m: m.group(1)),             # $...$
-        (r'\\((.*?)\\)', lambda m: m.group(1)),          # \(...\)
-    ]
-    
-    for pattern, replacement in patterns:
-        text = re.sub(pattern, replacement, text, flags=re.DOTALL)
-    
-    return text
-
-
 async def telegramify_content(text: str, max_length: int = 4090):
     """
     Usa telegramify-markdown v1.0.0+ para convertir y dividir el mensaje.
@@ -247,8 +231,7 @@ def format_bot_response(response: str) -> str:
     formatted = re.sub(r':::luz(?::)?\s*.+?:::', '', formatted, flags=re.IGNORECASE)
     formatted = re.sub(r':::camara(?::)?(?:\s+\S+)?:::', '', formatted)
     
-    # Apply math formatting
-    formatted = format_math_for_telegram(formatted)
+    # LaTeX math is now handled automatically by telegramify-markdown
     
     return formatted.strip()
 
