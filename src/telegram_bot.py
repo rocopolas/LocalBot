@@ -392,11 +392,16 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             await placeholder_msg.edit_text("🧮 Resolviendo matemáticas...")
             logger.info(f"Detectado comando matemático, consultando {MATH_MODEL}")
             
-            # Create messages for math model with original user question
+            # Build math messages from conversation history (no system prompt, no RAG)
             math_messages = [
-                {"role": "system", "content": "Eres un experto en matemáticas. Resuelve el problema paso a paso de forma clara y precisa. Puedes usar notación LaTeX estándar como \\( \\) para fórmulas inline y \\[ \\] para ecuaciones en bloque. Usa \\boxed{} para resaltar respuestas finales."},
-                {"role": "user", "content": user_text}
+                msg for msg in pruned_history
+                if msg.get("role") != "system"
             ]
+            # Replace last user message with raw text (without RAG context)
+            if math_messages and math_messages[-1].get("role") == "user":
+                math_messages[-1] = {"role": "user", "content": user_text}
+            else:
+                math_messages.append({"role": "user", "content": user_text})
             
             full_response = ""
             async for chunk in client.stream_chat(MATH_MODEL, math_messages):
