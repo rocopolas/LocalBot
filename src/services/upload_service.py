@@ -3,7 +3,7 @@ Upload Service for handling file uploads to external services like Catbox.moe.
 Includes fallback to Litterbox when Catbox is unavailable.
 """
 import os
-import requests
+import httpx
 import logging
 from typing import Optional
 
@@ -27,8 +27,8 @@ class UploadService:
             data['userhash'] = self.userhash
             
         with open(file_path, 'rb') as f:
-            files = {'fileToUpload': f}
-            response = requests.post(CATBOX_API, data=data, files=files, timeout=120)
+            files = {'fileToUpload': (os.path.basename(file_path), f)}
+            response = httpx.post(CATBOX_API, data=data, files=files, timeout=120)
         
         if response.status_code == 200:
             url = response.text.strip()
@@ -53,8 +53,8 @@ class UploadService:
         }
         
         with open(file_path, 'rb') as f:
-            files = {'fileToUpload': f}
-            response = requests.post(LITTERBOX_API, data=data, files=files, timeout=120)
+            files = {'fileToUpload': (os.path.basename(file_path), f)}
+            response = httpx.post(LITTERBOX_API, data=data, files=files, timeout=120)
         
         if response.status_code == 200:
             url = response.text.strip()
