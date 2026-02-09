@@ -9,13 +9,13 @@ cd /d "%~dp0"
 set "VENV_NAME=venv_bot"
 set "PYTHON_CMD="
 
-REM Find Python 3.11 exactly
-for %%P in (python3.11 python3 python py) do (
+REM Find Python 3.12 exactly
+for %%P in (python3.12 python3 python py) do (
     %%P --version >nul 2>&1
     if not errorlevel 1 (
         for /f "tokens=2 delims= " %%V in ('%%P --version 2^>^&1') do (
             for /f "tokens=1,2 delims=." %%A in ("%%V") do (
-                if %%A==3 if %%B==11 (
+                if %%A==3 if %%B==12 (
                     set "PYTHON_CMD=%%P"
                     goto :found_python
                 )
@@ -24,8 +24,8 @@ for %%P in (python3.11 python3 python py) do (
     )
 )
 
-echo [ERROR] Python 3.11 is required but not found.
-echo Please install Python 3.11 from https://www.python.org/downloads/release/python-3110/
+echo [ERROR] Python 3.12 is required but not found.
+echo Please install Python 3.12 from https://www.python.org/downloads/release/python-3120/
 pause
 exit /b 1
 

@@ -35,14 +35,14 @@ fi
 
 echo -e "${CYAN}Detected OS: $OS${NC}"
 
-# Check Python version (3.11 required)
+# Check Python version (3.12 required)
 check_python() {
-    # Prefer python3.11 explicitly, then check others
-    for candidate in python3.11 python3 python; do
+    # Prefer python3.12 explicitly, then check others
+    for candidate in python3.12 python3 python; do
         if command -v "$candidate" &> /dev/null; then
             local version
             version=$($candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null)
-            if [ "$version" = "3.11" ]; then
+            if [ "$version" = "3.12" ]; then
                 PYTHON_CMD="$candidate"
                 return 0
             fi
@@ -52,11 +52,11 @@ check_python() {
 }
 
 if ! check_python; then
-    echo -e "${RED}Python 3.11 is required but not found.${NC}"
+    echo -e "${RED}Python 3.12 is required but not found.${NC}"
     echo ""
-    echo "Please install Python 3.11:"
-    echo "  • Linux: sudo apt install python3.11 (or use your package manager)"
-    echo "  • macOS: brew install python@3.11"
+    echo "Please install Python 3.12:"
+    echo "  • Linux: sudo apt install python3.12 (or use your package manager)"
+    echo "  • macOS: brew install python@3.12"
     echo "  • Windows: Download from https://python.org/downloads/"
     echo ""
     read -p "Press Enter to exit..."

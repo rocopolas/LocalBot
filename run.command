@@ -17,14 +17,14 @@ cd "$(dirname "$0")" || exit 1
 
 echo -e "${CYAN}=== FemtoBot - macOS Setup ===${NC}"
 
-# Check Python version (3.11 required)
+# Check Python version (3.12 required)
 check_python() {
-    # Prefer python3.11 explicitly, then check others
-    for candidate in python3.11 python3; do
+    # Prefer python3.12 explicitly, then check others
+    for candidate in python3.12 python3; do
         if command -v "$candidate" &> /dev/null; then
             local version
             version=$($candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null)
-            if [ "$version" = "3.11" ]; then
+            if [ "$version" = "3.12" ]; then
                 PYTHON_CMD="$candidate"
                 return 0
             fi
@@ -34,11 +34,11 @@ check_python() {
 }
 
 if ! check_python; then
-    echo -e "${RED}Python 3.11 is required but not found.${NC}"
+    echo -e "${RED}Python 3.12 is required but not found.${NC}"
     echo ""
-    echo "Please install Python 3.11:"
-    echo "  • Homebrew: brew install python@3.11"
-    echo "  • pyenv: pyenv install 3.11.0"
+    echo "Please install Python 3.12:"
+    echo "  • Homebrew: brew install python@3.12"
+    echo "  • pyenv: pyenv install 3.12.0"
     echo "  • Official installer: https://www.python.org/downloads/macos/"
     echo ""
     read -p "Press Enter to exit..."
