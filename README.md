@@ -209,6 +209,11 @@ femtobot backup              # Backup data + config to ~/.femtobot/
 femtobot restore backup.tar.gz   # Restore from backup
 ```
 
+**Installing from a release:**
+```bash
+pip install https://github.com/rocopolas/FemtoBot/releases/download/v1.0.0/femtobot-1.0.0-py3-none-any.whl
+```
+
 3. **Configure environment variables:**
 ```bash
 cp .env.example .env
@@ -430,26 +435,6 @@ See `docs/architecture.md` for detailed information.
 Edit `config.yaml`:
 ```yaml
 MODEL: "your-model:tag"
-```
-
-## 📦 Releases
-
-New versions are automatically built when a git tag is pushed.
-
-**Creating a release:**
-```bash
-# 1. Update version in pyproject.toml
-# 2. Commit and tag
-git add -A && git commit -m "Release v1.0.0"
-git tag v1.0.0
-git push origin main --tags
-```
-
-The GitHub Action will build the `.whl` and `.tar.gz` and publish them to [Releases](https://github.com/rocopolas/FemtoBot/releases).
-
-**Installing from a release:**
-```bash
-pip install https://github.com/rocopolas/FemtoBot/releases/download/v1.0.0/femtobot-1.0.0-py3-none-any.whl
 ```
 
 ## 🐛 Troubleshooting
