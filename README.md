@@ -184,6 +184,7 @@ chmod +x scripts/install_cli.sh
 
 3. **Use from anywhere (no venv activation needed):**
 ```bash
+# Bot management
 femtobot serve     # Start bot (foreground)
 femtobot start     # Start bot (background daemon)
 femtobot stop      # Stop the daemon
@@ -192,7 +193,20 @@ femtobot status    # Show bot + Ollama status
 femtobot logs      # Show recent logs
 femtobot logs -f   # Follow logs in real-time
 femtobot tui       # Launch TUI interface
+
+# Configuration & setup
 femtobot config    # Show current configuration
+femtobot setup     # Download Ollama models from config.yaml
+femtobot update    # Git pull + reinstall dependencies
+femtobot doctor    # Run full diagnostic checks
+
+# Memory (RAG)
+femtobot memory status           # Show memory stats
+femtobot memory search "query"   # Search vector memory
+
+# Backup & restore
+femtobot backup              # Backup data + config to ~/.femtobot/
+femtobot restore backup.tar.gz   # Restore from backup
 ```
 
 3. **Configure environment variables:**
