@@ -18,8 +18,8 @@ from telegram.error import BadRequest
 _ABS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _ABS_ROOT)
 
-# Use relative path for application logic
-PROJECT_ROOT = os.path.relpath(_ABS_ROOT, os.getcwd())
+# Absolute project root (works from any working directory)
+PROJECT_ROOT = _ABS_ROOT
 
 # Import modular components
 from src.state.chat_manager import ChatManager

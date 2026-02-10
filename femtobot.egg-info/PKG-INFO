@@ -1,3 +1,23 @@
+Metadata-Version: 2.4
+Name: femtobot
+Version: 1.0.0
+Summary: Smart personal assistant for small local LLMs
+License-Expression: MIT
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.0
+Requires-Dist: python-telegram-bot==22.6
+Requires-Dist: httpx==0.28.1
+Requires-Dist: python-dotenv==1.2.1
+Requires-Dist: PyYAML==6.0.3
+Requires-Dist: faster-whisper==1.2.1
+Requires-Dist: chromadb>=0.4.0
+Requires-Dist: telegramify-markdown
+Requires-Dist: pymupdf
+Requires-Dist: python-docx
+Requires-Dist: pywizlight
+Requires-Dist: yt-dlp
+
 
 ![FemtoBot Logo](https://files.catbox.moe/zhkn08.jpg)
 
@@ -172,17 +192,14 @@ git clone https://github.com/rocopolas/FemtoBot.git
 cd FemtoBot
 ```
 
-2. **Setup & install CLI:**
+2. **Install as CLI tool:**
 ```bash
-chmod +x run.sh && ./run.sh   # Creates venv + installs deps + starts bot
-```
-Once the venv is ready, install the `femtobot` command system-wide:
-```bash
-chmod +x scripts/install_cli.sh
-./scripts/install_cli.sh       # Requires sudo
+python3.12 -m venv venv_bot
+source venv_bot/bin/activate
+pip install -e .
 ```
 
-3. **Use from anywhere (no venv activation needed):**
+3. **Use from anywhere:**
 ```bash
 femtobot serve     # Start bot (foreground)
 femtobot start     # Start bot (background daemon)
@@ -194,6 +211,21 @@ femtobot logs -f   # Follow logs in real-time
 femtobot tui       # Launch TUI interface
 femtobot config    # Show current configuration
 ```
+
+**Alternative (auto-setup script):**
+
+```bash
+# Linux
+chmod +x run.sh && ./run.sh
+
+# macOS
+chmod +x run.command && ./run.command
+
+# Windows
+run.bat
+```
+
+The script will automatically create venv, install deps, check Ollama and start the bot.
 
 3. **Configure environment variables:**
 ```bash

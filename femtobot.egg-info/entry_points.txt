@@ -1,0 +1,2 @@
+[console_scripts]
+femtobot = src.cli:cli

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "femtobot"
+version = "1.0.0"
+description = "Smart personal assistant for small local LLMs"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.0",
+    "python-telegram-bot==22.6",
+    "httpx==0.28.1",
+    "python-dotenv==1.2.1",
+    "PyYAML==6.0.3",
+    "faster-whisper==1.2.1",
+    "chromadb>=0.4.0",
+    "telegramify-markdown",
+    "pymupdf",
+    "python-docx",
+    "pywizlight",
+    "yt-dlp",
+]
+
+[project.scripts]
+femtobot = "src.cli:cli"
+
+[tool.setuptools]
+packages = ["src", "src.handlers", "src.jobs", "src.memory", "src.middleware",
+            "src.services", "src.state", "src.tui_handlers", "src.tui_utils",
+            "utils"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.md", "*.txt", "*.tcss"]
