@@ -81,32 +81,41 @@ class CommandService:
             cron_content = self._unescape_telegram_markdown(cron_content)
             logger.info(f"[CRON] Raw content: '{cron_content}'")
             
-            # Split into parts
+            # New simplified format: tipo minuto hora dia mes nombre
             parts = cron_content.split(None, 5)
             if len(parts) < 6:
                 logger.error(f"[CRON] Invalid cron format: {cron_content}")
-                await context.bot.send_message(chat_id, f"❌ Error: Formato cron inválido (se esperan 6 partes).")
+                await context.bot.send_message(chat_id, "❌ Error: Formato cron inválido (se esperan: tipo min hora dia mes nombre).")
                 continue
             
-            min_f, hour_f, day_f, month_f, dow_f = parts[0:5]
-            command = parts[5].strip()
-            schedule = f"{min_f} {hour_f} {day_f} {month_f} {dow_f}"
+            tipo = parts[0].lower()  # "unico" or "recurrente"
+            min_f, hour_f, day_f, month_f = parts[1:5]
+            nombre = parts[5].strip().rstrip(":")
             
-            if command.endswith(":"):
-                command = command[:-1].strip()
+            if tipo not in ("unico", "recurrente"):
+                logger.error(f"[CRON] Invalid type: {tipo}")
+                await context.bot.send_message(chat_id, f"❌ Error: Tipo inválido '{tipo}'. Usa 'unico' o 'recurrente'.")
+                continue
             
-            # Handle echo commands redirection
-            if "echo" in command:
-                if ">>" in command:
-                    command = command.split(">>")[0].strip()
-                command += f" >> {self.events_file}"
+            schedule = f"{min_f} {hour_f} {day_f} {month_f} *"
+            
+            # Build command automatically from nombre
+            if tipo == "unico":
+                from datetime import datetime
+                year = datetime.now().year
+                command = (
+                    f'[ "$(date +\\%Y)" = "{year}" ] && '
+                    f'notify-send "{nombre}"; echo "{nombre}" >> {self.events_file}'
+                )
+            else:
+                command = f'notify-send "{nombre}"; echo "{nombre}" >> {self.events_file}'
             
             sched_esc = escape_code(schedule)
-            cmd_esc = escape_code(command)
+            nombre_esc = escape_code(nombre)
             
             await context.bot.send_message(
                 chat_id,
-                f"⚠️ Agregando: `{sched_esc} {cmd_esc}`",
+                f"⚠️ Agregando ({tipo}): `{sched_esc}` — {nombre_esc}",
                 parse_mode="Markdown"
             )
             

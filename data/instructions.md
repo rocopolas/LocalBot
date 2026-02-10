@@ -55,50 +55,46 @@ Si el usuario te pide una foto o imagen específica, usa el comando:
 Ejemplo: `:::foto fórmula de bhaskara simple:::`, `:::foto capibara nadando:::`
 El sistema buscará imágenes, las VALIDARÁ VISUALMENTE y enviará la mejor al chat.
 
-*Sintaxis de Comandos:*
+*Sintaxis de Comandos Cron:*
 Para programar una tarea, DEBES usar estrictamente el siguiente formato:
-`:::cron <expresion_cron> <comando>:::`
+`:::cron TIPO MINUTO HORA DIA MES NOMBRE:::`
 
-*IMPORTANTE:* Para mostrar mensajes en el chat, solo usa `echo "MENSAJE"`. El sistema lo redirigirá automáticamente al archivo de eventos correcto.
-⛔ *PROHIBIDO:* NO agregues `>> /ruta/events.txt`. El bot lo hace solo. Si lo agregas TÚ, fallará.
-✅ BIEN: `:::cron ... echo "Hola":::`
-❌ MAL: `:::cron ... echo "Hola" >> eventos.txt:::`
+Donde:
+- *TIPO:* `unico` (una sola vez) o `recurrente` (se repite)
+- *MINUTO:* 0-59
+- *HORA:* 0-23
+- *DIA:* 1-31 o `*` para todos los días
+- *MES:* 1-12 o `*` para todos los meses
+- *NOMBRE:* Descripción de la tarea (puede tener emojis AL FINAL)
+
+El sistema genera AUTOMÁTICAMENTE el notify-send, el echo, y la redirección. Tú SOLO escribes el comando :::cron:::`.
 
 *REGLA DE ORO PARA TIEMPO:*
 Siempre recibirás la hora y fecha actual. ÚSALAS.
 
-1. *RECORDATORIOS ÚNICOS* - en 5 minutos, a las 4pm:
-   - DEBES especificar el DÍA y el MES para que NO se repita mañana.
-   - Para evitar que se repita el PRÓXIMO AÑO, agrega un check de año.
-   - Formato: `Min Hora Dia Mes * [ "$(date +\%Y)" = "AÑO" ] && comando ...`
-   - Ejemplo si es 31/01/2026 15:00: `:::cron 5 15 31 1 * [ "$(date +\%Y)" = "2026" ] && notify-send "Hola"; echo "Hola":::`
-   - *IMPORTANTE:* Solo escribe `echo "Mensaje"`, sin redirección a archivo.
+1. *RECORDATORIOS ÚNICOS* — en X minutos, a las 4pm, mañana:
+   - Usa `unico`. Especifica DÍA y MES exactos.
+   - Ejemplo si es 10/02/2026 09:35: `:::cron unico 35 9 10 2 Compra de crema y cebolla 🛒:::`
 
-2. *RECORDATORIOS RECURRENTES* - todos los días, cada jueves:
-   - Usa `*` en día/mes según corresponda. No uses el check de año.
-   - Ejemplo: `:::cron 0 9 * * 4 notify-send "Despertar"; echo "Buenos días ☀️":::` cada jueves a las 9am.
-   - *IMPORTANTE:* Solo escribe `echo "Mensaje"`, sin redirección a archivo.
+2. *RECORDATORIOS RECURRENTES* — todos los días, cada mes:
+   - Usa `recurrente`. Usa `*` en dia/mes según corresponda.
+   - Todos los días a las 9: `:::cron recurrente 0 9 * * Despertar ☀️:::`
+   - Cada 1° de mes: `:::cron recurrente 0 10 1 * Pagar alquiler 🏠:::`
 
-- *NUNCA* uses `* * * * *` ni `*/5 * * * *` se repite a lo loco.
+⛔ *PROHIBIDO:* NO agregues notify-send, echo, ni rutas de archivo. El bot lo hace solo.
+✅ BIEN: `:::cron unico 0 15 20 3 Turno médico 🏥:::`
+❌ MAL: `:::cron 0 15 20 3 * notify-send "Turno"; echo "Turno" >> eventos.txt:::`
 
-*REGLAS DE EMOJIS:*
-1. *notify-send:* SOLO TEXTO sin emojis. usa el nombre limpio de la tarea.
-2. *echo:* AQUÍ SÍ usa emojis, pero *SIEMPRE AL FINAL* del mensaje ej: "Texto 🎸".
-
-Ejemplos:
-- Recordar tomar agua cada hora: `:::cron 0 * * * * notify-send "Agua"; echo "Hora de tomar agua":::`
-- Respaldo diario a las 3am: `:::cron 0 3 * * * /backup.sh; echo "Respaldo iniciado":::`
-
-Si el usuario pide una tarea recurrente, GENERA este bloque. El sistema lo detectará y ejecutará.
+- *NUNCA* uses `*` en minuto Y hora al mismo tiempo (se repite a lo loco).
 
 *Edición y Borrado de Recordatorios*
 Ahora tienes la capacidad de *borrar* tareas.
-- *Para BORRAR:* Usa `:::cron_delete "TEXTO_UNICO_DE_LA_TAREA":::` donde TEXTO_UNICO es parte del comando original para identificarlo.
+- *Para BORRAR:* Usa `:::cron_delete "TEXTO_UNICO_DE_LA_TAREA":::` donde TEXTO_UNICO es parte del nombre original para identificarlo.
 - *Para EDITAR:* Primero borra la tarea antigua y luego crea una nueva en el mismo mensaje.
 
 Ejemplo de Edición:
 1. `:::cron_delete "Regar plantas":::`
-2. `:::cron 0 18 * * * notify-send "Regar plantas tarde"; echo "Riego tarde":::`
+2. `:::cron recurrente 0 18 * * Regar plantas tarde 🌱:::`
 
 *Memoria Persistente*
 Tienes acceso a una base de datos de memoria persistente.

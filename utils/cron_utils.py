@@ -119,7 +119,7 @@ class CronUtils:
         command = command.strip()
         
         # Check for multiple commands (potential injection)
-        if ';' in command and not (command.startswith('echo') or command.startswith('notify-send')):
+        if ';' in command and not (command.startswith('echo') or command.startswith('notify-send') or command.startswith('[')):
             # Allow semicolons only in specific safe contexts
             logger.warning(f"Multiple commands detected (semicolon)")
             return False, "Multiple commands not allowed for security"

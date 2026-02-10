@@ -22,7 +22,7 @@ class TUICommandProcessor:
     PATTERNS = {
         'memory': re.compile(r':::memory(?!_delete)\s+(.+?):::', re.DOTALL),
         'memory_delete': re.compile(r':::memory_delete\s+(.+?):::', re.DOTALL),
-        'cron': re.compile(r':::cron\s+(.+?)\s+(.+?):::'),
+        'cron': re.compile(r':::cron\s+(.+?):::', re.DOTALL),
         'cron_delete': re.compile(r':::cron_delete\s+(.+?):::'),
         'search': re.compile(r':::search\s+(.+?):::'),
         'foto': re.compile(r':::foto\s+(.+?):::', re.IGNORECASE),
@@ -114,21 +114,35 @@ class TUICommandProcessor:
             else:
                 self.output("⚠️ No se encontraron tareas", "warning")
         
-        # Add commands
+        # Add commands - new simplified format: tipo minuto hora dia mes nombre
         for match in self.PATTERNS['cron'].finditer(response):
-            schedule = match.group(1).strip()
-            command = match.group(2).strip()
+            cron_content = match.group(1).strip()
+            parts = cron_content.split(None, 5)
             
-            if command.endswith(":"):
-                command = command[:-1].strip()
+            if len(parts) < 6:
+                self.output(f"❌ Formato cron inválido: {cron_content}", "error")
+                continue
             
-            # Auto-append redirection for echo commands
-            if "echo" in command:
-                if ">>" in command:
-                     command = command.split(">>")[0].strip()
-                command += f" >> {events_file}"
+            tipo = parts[0].lower()
+            min_f, hour_f, day_f, month_f = parts[1:5]
+            nombre = parts[5].strip().rstrip(":")
             
-            self.output(f"⚠️ Agregando tarea: {schedule} {command}", "info")
+            if tipo not in ("unico", "recurrente"):
+                self.output(f"❌ Tipo inválido: {tipo}", "error")
+                continue
+            
+            schedule = f"{min_f} {hour_f} {day_f} {month_f} *"
+            
+            if tipo == "unico":
+                year = datetime.now().year
+                command = (
+                    f'[ "$(date +\\%Y)" = "{year}" ] && '
+                    f'notify-send "{nombre}"; echo "{nombre}" >> {events_file}'
+                )
+            else:
+                command = f'notify-send "{nombre}"; echo "{nombre}" >> {events_file}'
+            
+            self.output(f"⚠️ Agregando ({tipo}): {schedule} — {nombre}", "info")
             
             if CronUtils.add_job(schedule, command):
                 self.output("✅ Tarea agregada", "success")
