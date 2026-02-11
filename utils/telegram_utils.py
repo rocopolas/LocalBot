@@ -116,6 +116,39 @@ async def send_telegramify_results(context, chat_id, results, placeholder_msg=No
                     sent_messages.append(msg)
                     
             elif item.content_type == ContentType.FILE:
+                file_content = item.file_data
+                
+                # Check if file is small enough to send as text (e.g. < 2KB)
+                # and if it looks like a text file (based on extension or content)
+                is_small = len(file_content) < 2000
+                
+                if is_small:
+                    try:
+                        # Try to decode as text
+                        text_content = file_content.decode('utf-8')
+                        # Wrap in code block
+                        formatted_text = f"```\n{text_content}\n```"
+                        
+                        caption = getattr(item, 'caption_text', None)
+                        if caption:
+                            formatted_text = f"{caption}\n{formatted_text}"
+                            
+                        if not first_item_sent and placeholder_msg:
+                            await placeholder_msg.edit_text(formatted_text, parse_mode="Markdown")
+                            sent_messages.append(placeholder_msg)
+                            first_item_sent = True
+                        else:
+                            msg = await context.bot.send_message(
+                                chat_id,
+                                formatted_text,
+                                parse_mode="Markdown"
+                            )
+                            sent_messages.append(msg)
+                        continue # Skip sending as file
+                    except UnicodeDecodeError:
+                        # Not a text file, proceed to send as document
+                        pass
+
                 doc_file = io.BytesIO(item.file_data)
                 doc_file.name = item.file_name
                 
