@@ -17,7 +17,7 @@ class BraveSearch:
         Returns formatted results as a string.
         """
         if not BRAVE_API_KEY:
-            return "[Error: BRAVE_API_KEY no configurada en .env]"
+            return "[Error: BRAVE_API_KEY not configured in .env]"
         
         headers = {
             "Accept": "application/json",
@@ -45,20 +45,20 @@ class BraveSearch:
                 web_results = data.get("web", {}).get("results", [])
                 
                 for i, result in enumerate(web_results[:count], 1):
-                    title = result.get("title", "Sin título")
-                    description = result.get("description", "Sin descripción")
+                    title = result.get("title", "No title")
+                    description = result.get("description", "No description")
                     url = result.get("url", "")
                     results.append(f"{i}. **{title}**\n   {description}\n   {url}")
                 
                 if not results:
-                    return "[No se encontraron resultados]"
+                    return "[No results found]"
                 
                 return "\n\n".join(results)
                 
         except httpx.HTTPStatusError as e:
-            return f"[Error de búsqueda: {e.response.status_code}]"
+            return f"[Search error: {e.response.status_code}]"
         except Exception as e:
-            return f"[Error de búsqueda: {str(e)}]"
+            return f"[Search error: {str(e)}]"
 
     @staticmethod
     async def search_images(query: str, count: int = 5) -> list[str]:

@@ -37,7 +37,7 @@ class CommandHandlers:
         
         if not self.is_authorized(user_id):
             await update.message.reply_text(
-                f"⛔ No tienes acceso a este bot.\nTu ID es: `{user_id}`",
+                f"⛔ Access denied.\nYour ID is: `{user_id}`",
                 parse_mode="Markdown"
             )
             return
@@ -47,7 +47,7 @@ class CommandHandlers:
         await self.chat_manager.initialize_chat(chat_id, system_prompt)
         
         await update.message.reply_text(
-            "¡Hola! Soy FemtoBot en Telegram. Háblame y te responderé."
+            "Hi! I'm FemtoBot on Telegram. Talk to me and I'll respond."
         )
         logger.info(f"Chat {chat_id} started by user {user_id}")
     
@@ -69,7 +69,7 @@ class CommandHandlers:
         await self.chat_manager.initialize_chat(chat_id, system_prompt)
         
         await update.message.reply_text(
-            "🔄 Nueva conversación iniciada. El historial anterior fue borrado."
+            "🔄 New conversation started. Previous history cleared."
         )
         logger.info(f"New conversation started for chat {chat_id}")
     
@@ -91,12 +91,12 @@ class CommandHandlers:
             history = await self.chat_manager.get_history(chat_id)
             
             total_tokens = 0
-            calculation_method = "Aproximado (caracteres)"
+            calculation_method = "Approximate (characters)"
             
             try:
                 import tiktoken
                 encoder = tiktoken.get_encoding("cl100k_base")
-                calculation_method = "Real (tiktoken)"
+                calculation_method = "Exact (tiktoken)"
                 
                 for msg in history:
                     content = msg.get("content", "")
@@ -120,21 +120,21 @@ class CommandHandlers:
             bar = "█" * filled_length + "░" * (bar_length - filled_length)
             
             status_text = (
-                f"📊 *Estado del Bot* ({calculation_method})\n"
+                f"📊 *Bot Status* ({calculation_method})\n"
                 f"━━━━━━━━━━━━━━\n"
-                f"🧠 **Memoria Contextual:**\n"
+                f"🧠 **Context Memory:**\n"
                 f"`{bar}` {usage_percent:.1f}%\n"
-                f"🔢 {total_tokens:,} / {context_limit:,} tokens usados\n"
-                f"📉 {remaining_tokens:,} tokens restantes\n"
-                f"💬 {len(history)} mensajes en historial\n\n"
-                f"🔌 **Sistema:**\n"
-                f"✅ Modelo: `{get_config('MODEL')}`\n"
+                f"🔢 {total_tokens:,} / {context_limit:,} tokens used\n"
+                f"📉 {remaining_tokens:,} tokens remaining\n"
+                f"💬 {len(history)} messages in history\n\n"
+                f"🔌 **System:**\n"
+                f"✅ Model: `{get_config('MODEL')}`\n"
                 f"✅ Audio: `{get_config('WHISPER_MODEL_VOICE')}`"
             )
             
         except Exception as e:
             logger.error(f"Error calculating status: {e}")
-            status_text = f"⚠️ Error calculando estado: {str(e)}"
+            status_text = f"⚠️ Error calculating status: {str(e)}"
         
         try:
             await update.message.reply_text(status_text, parse_mode="Markdown")
@@ -154,7 +154,7 @@ class CommandHandlers:
             )
             return
         
-        status_msg = await update.message.reply_text("🔄 Descargando modelos...")
+        status_msg = await update.message.reply_text("🔄 Unloading models...")
         
         client = OllamaClient()
         model = get_config("MODEL")
@@ -167,7 +167,7 @@ class CommandHandlers:
         if vision_model:
             await client.unload_model(vision_model)
         
-        await status_msg.edit_text("✅ Modelos descargados de RAM.")
+        await status_msg.edit_text("✅ Models unloaded from RAM.")
         logger.info(f"Models unloaded by user {user_id}")
     
     @rate_limit(max_messages=1, window_seconds=60)
@@ -182,7 +182,7 @@ class CommandHandlers:
             )
             return
         
-        await update.message.reply_text("🔄 Reiniciando bot...")
+        await update.message.reply_text("🔄 Restarting bot...")
         logger.info(f"Bot restart initiated by user {user_id}")
         
         # Restart the process
@@ -203,7 +203,7 @@ class CommandHandlers:
         
         if not self.email_digest_job:
             await update.message.reply_text(
-                "⚠️ El sistema de email digest no está disponible.",
+                "⚠️ Email digest system is not available.",
                 parse_mode="Markdown"
             )
             return

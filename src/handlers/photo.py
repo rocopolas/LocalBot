@@ -60,7 +60,7 @@ class PhotoHandler:
         # Authorization check
         if not self.is_authorized(user_id):
             await update.message.reply_text(
-                f"⛔ No tienes acceso a este bot.\nTu ID es: `{user_id}`",
+                f"⛔ Access denied.\nYour ID is: `{user_id}`",
                 parse_mode="Markdown"
             )
             return
@@ -70,7 +70,7 @@ class PhotoHandler:
         if not vision_model:
             vision_model = self.model
         
-        status_msg = await update.message.reply_text("🔍 Analizando imagen...")
+        status_msg = await update.message.reply_text("🔍 Analyzing image...")
         
         try:
             # Get the largest photo (best quality)
@@ -114,7 +114,7 @@ class PhotoHandler:
             # --- Step 1: OCR extraction ---
             ocr_model = get_config("OCR_MODEL")
             if ocr_model:
-                await status_msg.edit_text(f"👁️ Extrayendo texto con OCR ({ocr_model})...")
+                await status_msg.edit_text(f"👁️ Extracting text with OCR ({ocr_model})...")
                 ocr_text = await client.describe_image(
                     ocr_model,
                     image_base64,
@@ -141,7 +141,7 @@ class PhotoHandler:
             if has_text and self._contains_math(ocr_text):
                 # Route to math model
                 math_model = get_config("MATH_MODEL")
-                await status_msg.edit_text(f"🧮 Matemáticas detectadas, resolviendo con {math_model}...")
+                await status_msg.edit_text(f"🧮 Math detected, solving with {math_model}...")
                 logger.info(f"Math detected in OCR text, routing to {math_model}")
                 
                 math_prompt = ocr_text
@@ -178,7 +178,7 @@ class PhotoHandler:
                 
                 await self.chat_manager.append_message(chat_id, {
                     "role": "user",
-                    "content": f"[Imagen con matemáticas - OCR: {ocr_text}]"
+                    "content": f"[Image with math - OCR: {ocr_text}]"
                 })
                 await self.chat_manager.append_message(chat_id, {
                     "role": "assistant", "content": full_response
@@ -186,12 +186,12 @@ class PhotoHandler:
                 return
             
             # --- Step 3: Vision description (normal flow or with OCR context) ---
-            await status_msg.edit_text(f"🔍 Analizando imagen con {vision_model}...")
+            await status_msg.edit_text(f"🔍 Analyzing image with {vision_model}...")
             
             if caption:
-                vision_prompt = f"El usuario envió esta imagen con el mensaje: '{caption}'. Describe la imagen en detalle."
+                vision_prompt = f"The user sent this image with the message: '{caption}'. Describe the image in detail."
             else:
-                vision_prompt = "Describe esta imagen en detalle. ¿Qué ves? Incluye objetos, personas, colores, texto visible, y cualquier detalle relevante."
+                vision_prompt = "Describe this image in detail. What do you see? Include objects, people, colors, visible text, and any relevant details."
             
             image_description = await client.describe_image(vision_model, image_base64, vision_prompt)
             
@@ -199,7 +199,7 @@ class PhotoHandler:
             if vision_model != self.model:
                 await client.unload_model(vision_model)
             
-            await status_msg.edit_text("💭 Procesando respuesta...")
+            await status_msg.edit_text("💭 Processing response...")
             
             # Initialize chat history if needed
             history = await self.chat_manager.get_history(chat_id)
@@ -210,23 +210,23 @@ class PhotoHandler:
             
             # Build context message (include OCR text if available)
             if has_text:
-                ocr_block = f"\n\n[Texto extraído por OCR: {ocr_text}]"
+                ocr_block = f"\n\n[OCR extracted text: {ocr_text}]"
             else:
                 ocr_block = ""
             
             if caption:
                 context_message = (
-                    f"[El usuario envió una imagen con el mensaje: '{caption}']"
-                    f"\n\n[Descripción de la imagen: {image_description}]"
+                    f"[The user sent an image with the message: '{caption}']"
+                    f"\n\n[Image description: {image_description}]"
                     f"{ocr_block}"
-                    f"\n\nResponde al usuario considerando la imagen y su mensaje."
+                    f"\n\nRespond to the user considering the image and their message."
                 )
             else:
                 context_message = (
-                    f"[El usuario envió una imagen]"
-                    f"\n\n[Descripción de la imagen: {image_description}]"
+                    f"[The user sent an image]"
+                    f"\n\n[Image description: {image_description}]"
                     f"{ocr_block}"
-                    f"\n\nComenta sobre la imagen de manera útil."
+                    f"\n\nComment on the image helpfully."
                 )
             
             # Add to history
@@ -276,14 +276,14 @@ class PhotoHandler:
             from src.services.upload_service import UploadService
             uploader = UploadService()
             
-            await status_msg.edit_text("📤 Subiendo a Catbox.moe...")
+            await status_msg.edit_text("📤 Uploading to Catbox.moe...")
             url = await asyncio.to_thread(uploader.upload_to_catbox, file_path)
             
             if url:
-                 await status_msg.edit_text(f"✅ Subida completada:\n{url}", disable_web_page_preview=True)
+                 await status_msg.edit_text(f"✅ Upload complete:\n{url}", disable_web_page_preview=True)
             else:
-                 await status_msg.edit_text("❌ Error al subir a Catbox.")
+                 await status_msg.edit_text("❌ Error uploading to Catbox.")
                  
         except Exception as e:
             logger.error(f"Error in upload handler: {e}")
-            await status_msg.edit_text(f"❌ Error interno: {str(e)}")
+            await status_msg.edit_text(f"❌ Internal error: {str(e)}")

@@ -109,16 +109,16 @@ class OllamaClient:
                         
         except httpx.ConnectError as e:
             error_msg = (
-                "Error: No se pudo conectar a Ollama. "
-                "Asegúrate de que 'ollama serve' esté corriendo."
+                "Error: Could not connect to Ollama. "
+                "Make sure 'ollama serve' is running."
             )
             logger.error(f"Connection error to Ollama: {e}")
             yield error_msg
             
         except httpx.RemoteProtocolError as e:
             error_msg = (
-                "Error: La conexión con Ollama se cerró inesperadamente. "
-                "(Posible crash del modelo o timeout)."
+                "Error: Ollama connection closed unexpectedly. "
+                "(Possible model crash or timeout)."
             )
             logger.error(f"Remote protocol error: {e}")
             yield error_msg
@@ -156,7 +156,7 @@ class OllamaClient:
         self, 
         model: str, 
         image_base64: str, 
-        prompt: str = "Describe esta imagen en detalle."
+        prompt: str = "Describe this image in detail."
     ) -> str:
         """
         Use a vision model to describe an image.
@@ -187,21 +187,21 @@ class OllamaClient:
             response = await client.post(url, json=payload, timeout=120.0)
             if response.status_code == 200:
                 data = response.json()
-                description = data.get("message", {}).get("content", "[Sin descripción]")
+                description = data.get("message", {}).get("content", "[No description]")
                 logger.debug(f"Image described successfully with model {model}")
                 return description
             else:
-                error_msg = f"[Error del modelo de visión: {response.status_code}]"
+                error_msg = f"[Vision model error: {response.status_code}]"
                 logger.error(f"Vision model error: {error_msg}")
                 return error_msg
                     
         except httpx.ConnectError as e:
             logger.error(f"Connection error in describe_image: {e}")
-            return "[Error: No se pudo conectar a Ollama]"
+            return "[Error: Could not connect to Ollama]"
             
         except httpx.TimeoutException as e:
             logger.error(f"Timeout in describe_image: {e}")
-            return "[Error: Timeout al procesar la imagen]"
+            return "[Error: Timeout processing the image]"
             
         except Exception as e:
             logger.error(f"Unexpected error in describe_image: {e}", exc_info=True)

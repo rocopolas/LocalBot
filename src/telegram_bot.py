@@ -190,7 +190,7 @@ async def queue_worker():
                 # Notify user about the error
                 try:
                     chat_id = update.effective_chat.id
-                    await context.bot.send_message(chat_id, f"❌ Error procesando mensaje: {e}")
+                    await context.bot.send_message(chat_id, f"❌ Error processing message: {e}")
                 except Exception:
                     pass
             
@@ -210,7 +210,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if not is_authorized(user_id):
         await update.message.reply_text(
-            f"⛔ No tienes acceso. Tu ID: `{user_id}`",
+            f"⛔ Access denied. Your ID: `{user_id}`",
             parse_mode="Markdown"
         )
         return
@@ -232,7 +232,7 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
     user_text = text_override or update.message.text
     
     if not user_text or not user_text.strip():
-        await context.bot.send_message(chat_id, "⚠️ No se detectó texto.")
+        await context.bot.send_message(chat_id, "⚠️ No text detected.")
         return
     
     # Initialize chat history
@@ -269,20 +269,20 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                  ext = os.path.splitext(replied_msg.document.file_name)[1] or ".tmp"
 
             if media_file:
-                 status_msg = await update.message.reply_text(f"📤 Preparando {media_type} para subir...")
+                 status_msg = await update.message.reply_text(f"📤 Preparing {media_type} for upload...")
                  try:
                      import tempfile
                      with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
                         await media_file.download_to_drive(tmp.name)
                         tmp_path = tmp.name
                      
-                     await status_msg.edit_text("📤 Subiendo a Catbox.moe...")
+                     await status_msg.edit_text("📤 Uploading to Catbox.moe...")
                      url = await asyncio.to_thread(uploader.upload_to_catbox, tmp_path)
                      
                      if url:
-                         await status_msg.edit_text(f"✅ Subida completada:\n{url}", disable_web_page_preview=True)
+                         await status_msg.edit_text(f"✅ Upload complete:\n{url}", disable_web_page_preview=True)
                      else:
-                         await status_msg.edit_text("❌ Error al subir a Catbox.")
+                         await status_msg.edit_text("❌ Error uploading to Catbox.")
                          
                      import os
                      from contextlib import suppress
@@ -300,12 +300,12 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
         platform, action_type, url = media_action
         
         if platform == 'twitter':
-            status_msg = await context.bot.send_message(chat_id, "🐦 Procesando Twitter...")
+            status_msg = await context.bot.send_message(chat_id, "🐦 Processing Twitter...")
             try:
-                await status_msg.edit_text("📤 Descargando...")
+                await status_msg.edit_text("📤 Downloading...")
                 media_path, media_type = await media_service.process_twitter(url)
                 
-                await status_msg.edit_text("📤 Subiendo...")
+                await status_msg.edit_text("📤 Uploading...")
                 with open(media_path, 'rb') as f:
                     if media_type == 'photo':
                         await context.bot.send_photo(chat_id, photo=f)
@@ -321,12 +321,12 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
 
         elif platform == 'youtube':
             if action_type == 'download_video':
-                status_msg = await context.bot.send_message(chat_id, "🎥 Iniciando descarga...")
+                status_msg = await context.bot.send_message(chat_id, "🎥 Starting download...")
                 try:
-                    await status_msg.edit_text("⬇️ Descargando video...")
+                    await status_msg.edit_text("⬇️ Downloading video...")
                     video_path = await media_service.download_youtube(url)
                     
-                    await status_msg.edit_text("📤 Subiendo...")
+                    await status_msg.edit_text("📤 Uploading...")
                     with open(video_path, 'rb') as f:
                         await context.bot.send_video(chat_id, video=f)
                     import os
@@ -338,18 +338,18 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
                     return
                     
             elif action_type == 'transcribe':
-                status_msg = await context.bot.send_message(chat_id, "🎙️ Analizando video para transcribir...")
+                status_msg = await context.bot.send_message(chat_id, "🎙️ Analyzing video for transcription...")
                 try:
                     # Perform transcription
                     transcription, video_title = await media_service.transcribe_youtube(url)
                     
-                    await status_msg.edit_text(f"✅ Transcripción de '_{video_title}_' completada. Analizando...")
+                    await status_msg.edit_text(f"✅ Transcription of '_{video_title}_' complete. Analyzing...")
                     
                     # Update user text with transcription request for the LLM
                     user_text = (
-                        f"Analiza esta transcripción de YouTube '{video_title}':\n\n"
+                        f"Analyze this YouTube transcription of '{video_title}':\n\n"
                         f"\"\"\"\n{transcription}\n\"\"\"\n\n"
-                        f"Haz un resumen detallado."
+                        f"Provide a detailed summary."
                     )
                     placeholder_msg = status_msg
                 except Exception as e:
@@ -371,13 +371,12 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
 
     # Prepare context
     current_time = datetime.now().strftime("%H:%M del %d/%m/%Y")
-    crontab_lines = CronUtils.get_crontab()
-    crontab_str = "\n".join(crontab_lines) if crontab_lines else "(vacío)"
+    crontab_str = CronUtils.get_readable_agenda()
     
     # RAG Context Retrieval via Service
     rag_context = await rag_service.get_context(user_text)
 
-    context_message = f"{user_text} [Sistema: La hora actual es {current_time}. Agenda: {crontab_str}.{rag_context}]"
+    context_message = f"{user_text} [System: Current time is {current_time}. Schedule: {crontab_str}.{rag_context}]"
     await chat_manager.append_message(chat_id, {"role": "user", "content": context_message})
     
     try:
@@ -395,8 +394,8 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
         
         # Handle math command - switch to math model
         if COMMAND_PATTERNS['matematicas'].search(full_response):
-            await placeholder_msg.edit_text("🧮 Resolviendo matemáticas...")
-            logger.info(f"Detectado comando matemático, consultando {MATH_MODEL}")
+            await placeholder_msg.edit_text("🧮 Solving math...")
+            logger.info(f"Math command detected, querying {MATH_MODEL}")
             
             # Build math messages from conversation history (no system prompt, no RAG)
             math_messages = [
@@ -417,19 +416,19 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
             
             # Unload math model after use
             await client.unload_model(MATH_MODEL)
-            logger.info(f"Modelo matemático {MATH_MODEL} descargado")
+            logger.info(f"Math model {MATH_MODEL} unloaded")
         
         # Handle search command
         search_match = COMMAND_PATTERNS['search'].search(full_response)
         if search_match:
             search_query = search_match.group(1).strip()
-            await placeholder_msg.edit_text(f"🔍 Buscando: {search_query}...")
+            await placeholder_msg.edit_text(f"🔍 Searching: {search_query}...")
             
             search_results = await BraveSearch.search(search_query)
             await chat_manager.append_message(chat_id, {"role": "assistant", "content": full_response})
             await chat_manager.append_message(chat_id, {
                 "role": "user",
-                "content": f"[Resultados de búsqueda para '{search_query}']:\n{search_results}"
+                "content": f"[Search results for '{search_query}']:\n{search_results}"
             })
             
             final_response = ""
@@ -470,9 +469,9 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
         # If response is empty after formatting but commands were processed, show confirmation
         if response_empty and commands_processed:
             try:
-                await placeholder_msg.edit_text("✅ Comandos ejecutados correctamente.")
+                await placeholder_msg.edit_text("✅ Commands executed successfully.")
             except BadRequest:
-                await context.bot.send_message(chat_id, "✅ Comandos ejecutados correctamente.")
+                await context.bot.send_message(chat_id, "✅ Commands executed successfully.")
         
     except Exception as e:
         logger.error(f"Error processing message: {e}")
@@ -494,7 +493,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         try:
             await context.bot.send_message(
                 update.effective_chat.id,
-                f"❌ Error inesperado: {context.error}"
+                f"❌ Unexpected error: {context.error}"
             )
         except Exception:
             pass

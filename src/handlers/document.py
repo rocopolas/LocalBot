@@ -45,20 +45,20 @@ class DocumentHandler:
         # Authorization check
         if not self.is_authorized(user_id):
             await update.message.reply_text(
-                f"⛔ No tienes acceso a este bot.\nTu ID es: `{user_id}`",
+                f"⛔ Access denied.\nYour ID is: `{user_id}`",
                 parse_mode="Markdown"
             )
             return
         
         document = update.message.document
-        file_name = document.file_name or "documento"
+        file_name = document.file_name or "document"
         
         # Check if it's a supported document type
         if not is_supported_document(file_name):
             return
         
         status_msg = await update.message.reply_text(
-            f"📄 Leyendo *{file_name}*...",
+            f"📄 Reading *{file_name}*...",
             parse_mode="Markdown"
         )
         
@@ -79,14 +79,14 @@ class DocumentHandler:
             # OCR Fallback
             if needs_ocr and doc_type == "PDF":
                 ocr_model = get_config("OCR_MODEL", "glm-4v")
-                await status_msg.edit_text(f"👁️ Documento escaneado detectado. Iniciando OCR con {ocr_model}...")
+                await status_msg.edit_text(f"👁️ Scanned document detected. Starting OCR with {ocr_model}...")
                 try:
                     images_b64 = await asyncio.to_thread(convert_pdf_to_images, tmp_path)
                     if images_b64:
                          client = OllamaClient()
                          ocr_texts = []
                          for i, img_b64 in enumerate(images_b64):
-                             await status_msg.edit_text(f"👁️ OCR: Procesando página {i+1}/{len(images_b64)}...")
+                             await status_msg.edit_text(f"👁️ OCR: Processing page {i+1}/{len(images_b64)}...")
                              # Prompt for OCR
                              page_text = await client.describe_image(
                                  model=ocr_model,
@@ -98,7 +98,7 @@ class DocumentHandler:
                          doc_text = "\n\n".join(ocr_texts)
                          doc_type += " (OCR)"
                     else:
-                         doc_text += "\n[Advertencia: Documento escaneado pero no se pudieron extraer imágenes]"
+                         doc_text += "\n[Warning: Scanned document but could not extract images]"
                 except Exception as e:
                     logger.error(f"OCR Error: {e}")
                     doc_text += f"\n[Error OCR: {str(e)}]"
@@ -116,7 +116,7 @@ class DocumentHandler:
             
             # Truncate if too long
             if len(doc_text) > 100000:
-                doc_text = doc_text[:100000] + "\n\n[... documento truncado por longitud ...]"
+                doc_text = doc_text[:100000] + "\n\n[... document truncated due to length ...]"
             
             # Index to Vector Store
             from datetime import datetime
@@ -127,7 +127,7 @@ class DocumentHandler:
             }
             await self.vector_manager.add_document(doc_text, metadata)
             
-            await status_msg.edit_text(f"🧠 Procesando e indexando documento {doc_type}...")
+            await status_msg.edit_text(f"🧠 Processing and indexing {doc_type} document...")
             
             # Initialize chat history if needed
             history = await self.chat_manager.get_history(chat_id)
@@ -139,9 +139,9 @@ class DocumentHandler:
             # Build context message
             caption = update.message.caption
             if caption:
-                context_message = f"[El usuario envió un documento {doc_type} llamado '{file_name}' con el mensaje: '{caption}']\n\nContenido del documento:\n{doc_text}\n\nResponde considerando el documento y el mensaje del usuario."
+                context_message = f"[The user sent a {doc_type} document named '{file_name}' with the message: '{caption}']\n\nDocument content:\n{doc_text}\n\nRespond considering the document and the user's message."
             else:
-                context_message = f"[El usuario envió un documento {doc_type} llamado '{file_name}']\n\nContenido del documento:\n{doc_text}\n\nResume o comenta sobre el contenido del documento."
+                context_message = f"[The user sent a {doc_type} document named '{file_name}']\n\nDocument content:\n{doc_text}\n\nSummarize or comment on the document's content."
             
             # Add to history
             await self.chat_manager.append_message(chat_id, {"role": "user", "content": context_message})
@@ -176,9 +176,9 @@ class DocumentHandler:
                         
                         # Save to Vector DB
                         await self.vector_manager.add_memory(memory_content)
-                        await context.bot.send_message(chat_id, f"💾 Guardado en memoria: _{memory_content}_", parse_mode="Markdown")
+                        await context.bot.send_message(chat_id, f"💾 Saved to memory: _{memory_content}_", parse_mode="Markdown")
                     except Exception as e:
-                        await context.bot.send_message(chat_id, f"⚠️ Error guardando memoria: {str(e)}")
+                        await context.bot.send_message(chat_id, f"⚠️ Error saving memory: {str(e)}")
                         
         except Exception as e:
             logger.error(f"Error processing document: {e}")

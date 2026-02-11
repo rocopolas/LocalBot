@@ -36,7 +36,7 @@ class VideoHandler:
         # Authorization check
         if not self.is_authorized(user_id):
             await update.message.reply_text(
-                f"⛔ No tienes acceso a este bot.\nTu ID es: `{user_id}`",
+                f"⛔ Access denied.\nYour ID is: `{user_id}`",
                 parse_mode="Markdown"
             )
             return
@@ -48,7 +48,7 @@ class VideoHandler:
         
         # Only process if upload intent is detected (for now)
         if uploader.is_upload_intent(caption):
-            status_msg = await update.message.reply_text("🎥 Procesando video...")
+            status_msg = await update.message.reply_text("🎬 Processing video...")
             
             try:
                 video = update.message.video
@@ -79,16 +79,16 @@ class VideoHandler:
             from src.services.upload_service import UploadService
             uploader = UploadService()
             
-            await status_msg.edit_text("📤 Subiendo a Catbox.moe...")
+            await status_msg.edit_text("📤 Uploading to Catbox.moe...")
             # Run blocking upload in thread
             import asyncio
             url = await asyncio.to_thread(uploader.upload_to_catbox, file_path)
             
             if url:
-                 await status_msg.edit_text(f"✅ Subida completada:\n{url}", disable_web_page_preview=True)
+                 await status_msg.edit_text(f"✅ Upload complete:\n{url}", disable_web_page_preview=True)
             else:
-                 await status_msg.edit_text("❌ Error al subir a Catbox.")
+                 await status_msg.edit_text("❌ Error uploading to Catbox.")
                  
         except Exception as e:
             logger.error(f"Error in upload handler: {e}")
-            await status_msg.edit_text(f"❌ Error interno: {str(e)}")
+            await status_msg.edit_text(f"❌ Internal error: {str(e)}")

@@ -68,7 +68,7 @@ class TUICommandProcessor:
         from utils.search_utils import BraveSearch
         
         query = match.group(1).strip()
-        self.output(f"🔍 Buscando: {query}", "info")
+        self.output(f"🔍 Searching: {query}", "info")
         
         try:
             results = await BraveSearch.search(query)
@@ -77,7 +77,7 @@ class TUICommandProcessor:
             chat_history.append({"role": "assistant", "content": response})
             chat_history.append({
                 "role": "user",
-                "content": f"[Sistema: Resultados de búsqueda para '{query}']:\n{results}\n\nAhora responde al usuario."
+                "content": f"[System: Search results for '{query}']:\n{results}\n\nNow respond to the user."
             })
             
             # Get follow-up response
@@ -97,7 +97,7 @@ class TUICommandProcessor:
             
         except Exception as e:
             logger.error(f"Search error: {e}")
-            self.output(f"❌ Error en búsqueda: {e}", "error")
+            self.output(f"❌ Search error: {e}", "error")
             return self._clean_response(response)
     
     async def _process_cron_commands(self, response: str):
@@ -107,12 +107,12 @@ class TUICommandProcessor:
         # Delete commands
         for match in self.PATTERNS['cron_delete'].finditer(response):
             target = match.group(1).strip()
-            self.output(f"🗑️ Eliminando tarea: {target}", "info")
+            self.output(f"🗑️ Removing task: {target}", "info")
             
             if CronUtils.delete_job(target):
-                self.output("✅ Tarea eliminada", "success")
+                self.output("✅ Task removed", "success")
             else:
-                self.output("⚠️ No se encontraron tareas", "warning")
+                self.output("⚠️ No matching tasks found", "warning")
         
         # Add commands - new simplified format: tipo minuto hora dia mes nombre
         for match in self.PATTERNS['cron'].finditer(response):
@@ -120,7 +120,7 @@ class TUICommandProcessor:
             parts = cron_content.split(None, 5)
             
             if len(parts) < 6:
-                self.output(f"❌ Formato cron inválido: {cron_content}", "error")
+                self.output(f"❌ Invalid cron format: {cron_content}", "error")
                 continue
             
             tipo = parts[0].lower()
@@ -128,7 +128,7 @@ class TUICommandProcessor:
             nombre = parts[5].strip().rstrip(":")
             
             if tipo not in ("unico", "recurrente"):
-                self.output(f"❌ Tipo inválido: {tipo}", "error")
+                self.output(f"❌ Invalid type: {tipo}", "error")
                 continue
             
             schedule = f"{min_f} {hour_f} {day_f} {month_f} *"
@@ -142,12 +142,12 @@ class TUICommandProcessor:
             else:
                 command = f'notify-send "{nombre}"; echo "{nombre}" >> {events_file}'
             
-            self.output(f"⚠️ Agregando ({tipo}): {schedule} — {nombre}", "info")
+            self.output(f"⚠️ Adding ({tipo}): {schedule} — {nombre}", "info")
             
             if CronUtils.add_job(schedule, command):
-                self.output("✅ Tarea agregada", "success")
+                self.output("✅ Task added", "success")
             else:
-                self.output("❌ Error al agregar tarea", "error")
+                self.output("❌ Error adding task", "error")
     
     async def _process_memory_commands(self, response: str):
         """Process memory add/delete commands."""
@@ -169,9 +169,9 @@ class TUICommandProcessor:
                 if removed > 0:
                     with open(memory_path, "w", encoding="utf-8") as f:
                         f.writelines(new_lines)
-                    self.output(f"🗑️ Eliminado de memoria: {target}", "success")
+                    self.output(f"🗑️ Removed from memory: {target}", "success")
                 else:
-                    self.output(f"⚠️ No encontrado: {target}", "warning")
+                    self.output(f"⚠️ Not found: {target}", "warning")
                     
             except Exception as e:
                 self.output(f"❌ Error: {e}", "error")
@@ -185,7 +185,7 @@ class TUICommandProcessor:
             try:
                 with open(memory_path, "a", encoding="utf-8") as f:
                     f.write(f"\n- {content}")
-                self.output(f"💾 Guardado en memoria: {content}", "success")
+                self.output(f"💾 Saved to memory: {content}", "success")
             except Exception as e:
                 self.output(f"❌ Error: {e}", "error")
     
@@ -200,7 +200,7 @@ class TUICommandProcessor:
                 result = await control_light(name, action, value)
                 self.output(result, "info")
             except Exception as e:
-                self.output(f"❌ Error con luz: {e}", "error")
+                self.output(f"❌ Light error: {e}", "error")
     
     def _clean_response(self, response: str) -> str:
         """Remove all command patterns from response."""

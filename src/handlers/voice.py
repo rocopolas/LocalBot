@@ -57,8 +57,8 @@ class VoiceHandler:
         
         if is_external:
             status_msg = await update.message.reply_text(
-                "🎧 Audio externo detectado. Transcribiendo con modelo grande...\n"
-                "_(Esto puede tomar tiempo)_",
+                "🎧 External audio detected. Transcribing with large model...\n"
+                "_(This may take a while)_",
                 parse_mode="Markdown"
             )
         else:
@@ -86,14 +86,14 @@ class VoiceHandler:
             
             if is_external:
                 # External: just show transcription, don't process with LLM
-                text = f"📝 *Transcripción (audio externo):*\n\n{transcription}"
+                text = f"📝 *Transcription (external audio):*\n\n{transcription}"
                 
                 # Split and send chunks using telegramify
                 chunks = await telegramify_content(text)
                 await send_telegramify_results(context, chat_id, chunks, status_msg)
             else:
                 # Direct voice: show transcription and process with LLM
-                text = f"🎙️ *Transcripción:*\n_{transcription}_"
+                text = f"🎙️ *Transcription:*\n_{transcription}_"
                 
                 # Split and send chunks using telegramify
                 chunks = await telegramify_content(text)

@@ -70,7 +70,7 @@ class AudioHandler:
                 os.unlink(tmp_path)
             
             # Show transcription only (no LLM processing)
-            text = f"📝 *Transcripción de* `{file_name}`:\n\n{transcription}"
+            text = f"📝 *Transcription of* `{file_name}`:\n\n{transcription}"
             
             # Split and send chunks using telegramify
             chunks = await telegramify_content(text)

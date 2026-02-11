@@ -96,7 +96,7 @@ async def transcribe_audio(audio_path: str) -> str:
     model = get_whisper_model()
     
     if model is None:
-        return "[Error: faster-whisper no instalado. Ejecuta: pip install faster-whisper]"
+        return "[Error: faster-whisper not installed. Run: pip install faster-whisper]"
     
     try:
         language = get_config("WHISPER_LANGUAGE")
@@ -112,11 +112,11 @@ async def transcribe_audio(audio_path: str) -> str:
             logger.info(f"Transcription completed ({len(transcription)} chars)")
             return transcription
         else:
-            return "[Audio sin contenido detectado]"
+            return "[No audio content detected]"
         
     except Exception as e:
         logger.error(f"Transcription error: {e}")
-        return f"[Error de transcripción: {str(e)}]"
+        return f"[Transcription error: {str(e)}]"
     finally:
         unload_whisper_model()
 
@@ -135,7 +135,7 @@ async def transcribe_audio_large(audio_path: str) -> str:
     model = get_whisper_model_large()
     
     if model is None:
-        return "[Error: faster-whisper no instalado]"
+        return "[Error: faster-whisper not installed]"
     
     try:
         language = get_config("WHISPER_LANGUAGE")
@@ -151,11 +151,11 @@ async def transcribe_audio_large(audio_path: str) -> str:
             logger.info(f"Large model transcription completed ({len(transcription)} chars)")
             return transcription
         else:
-            return "[Audio sin contenido detectado]"
+            return "[No audio content detected]"
         
     except Exception as e:
         logger.error(f"Large transcription error: {e}")
-        return f"[Error de transcripción: {str(e)}]"
+        return f"[Transcription error: {str(e)}]"
     finally:
         unload_whisper_model_large()
 

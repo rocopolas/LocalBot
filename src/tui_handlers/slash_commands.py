@@ -66,7 +66,7 @@ class TUISlashCommands:
         except ImportError:
             total_chars = sum(len(m.get("content", "")) for m in chat_history)
             total_tokens = total_chars // 4
-            calculation_method = "Aproximado"
+            calculation_method = "Approximate"
         
         context_limit = int(get_config("CONTEXT_LIMIT", 200000))
         usage_percent = min(100, (total_tokens / context_limit) * 100)
@@ -77,16 +77,16 @@ class TUISlashCommands:
         filled = int(bar_length * usage_percent / 100)
         bar = "█" * filled + "░" * (bar_length - filled)
         
-        status_text = f"""📊 Estado del Bot ({calculation_method})
+        status_text = f"""📊 Bot Status ({calculation_method})
 ━━━━━━━━━━━━━━
-🧠 Memoria Contextual:
+🧠 Context Memory:
 {bar} {usage_percent:.1f}%
 🔢 {total_tokens:,} / {context_limit:,} tokens
-📉 {remaining:,} restantes
-💬 {len(chat_history)} mensajes
+📉 {remaining:,} remaining
+💬 {len(chat_history)} messages
 
-🔌 Sistema:
-✅ Modelo: {self.model}
+🔌 System:
+✅ Model: {self.model}
 ✅ Audio: {get_config('WHISPER_MODEL_VOICE')}"""
         
         self.output(status_text, "info")
@@ -98,7 +98,7 @@ class TUISlashCommands:
         chat_history.clear()
         chat_history.extend(system_msgs)
         
-        self.output("🔄 Nueva conversación iniciada. Historial borrado.", "success")
+        self.output("🔄 New conversation started. History cleared.", "success")
         
         # Save if history manager available
         if self.history_manager:
@@ -106,7 +106,7 @@ class TUISlashCommands:
     
     async def _cmd_unload(self, args: str, chat_history: List[Dict]):
         """Unload models from RAM."""
-        self.output("🔄 Descargando modelos...", "info")
+        self.output("🔄 Unloading models...", "info")
         
         client = OllamaClient()
         await client.unload_model(self.model)
@@ -115,25 +115,25 @@ class TUISlashCommands:
         if vision_model:
             await client.unload_model(vision_model)
         
-        self.output("✅ Modelos descargados de RAM.", "success")
+        self.output("✅ Models unloaded from RAM.", "success")
     
     async def _cmd_save(self, args: str, chat_history: List[Dict]):
         """Save current session."""
         if not self.history_manager:
-            self.output("❌ Historial no disponible", "error")
+            self.output("❌ History not available", "error")
             return
         
         session_name = args.strip() if args.strip() else "default"
         
         if self.history_manager.save_history(chat_history, session_name):
-            self.output(f"💾 Sesión guardada: {session_name}", "success")
+            self.output(f"💾 Session saved: {session_name}", "success")
         else:
-            self.output("❌ Error guardando sesión", "error")
+            self.output("❌ Error saving session", "error")
     
     async def _cmd_load(self, args: str, chat_history: List[Dict]):
         """Load a session."""
         if not self.history_manager:
-            self.output("❌ Historial no disponible", "error")
+            self.output("❌ History not available", "error")
             return
         
         session_name = args.strip() if args.strip() else "default"
@@ -142,23 +142,23 @@ class TUISlashCommands:
         if history:
             chat_history.clear()
             chat_history.extend(history)
-            self.output(f"📂 Sesión cargada: {session_name} ({len(history)} mensajes)", "success")
+            self.output(f"📂 Session loaded: {session_name} ({len(history)} messages)", "success")
         else:
-            self.output(f"⚠️ No se encontró sesión: {session_name}", "warning")
+            self.output(f"⚠️ Session not found: {session_name}", "warning")
     
     async def _cmd_sessions(self, args: str, chat_history: List[Dict]):
         """List all saved sessions."""
         if not self.history_manager:
-            self.output("❌ Historial no disponible", "error")
+            self.output("❌ History not available", "error")
             return
         
         sessions = self.history_manager.list_sessions()
         
         if not sessions:
-            self.output("No hay sesiones guardadas", "info")
+            self.output("No saved sessions", "info")
             return
         
-        output = "📁 Sesiones guardadas:\n"
+        output = "📁 Saved sessions:\n"
         for session in sessions[:10]:  # Show last 10
             output += f"  • {session['id']}: {session['message_count']} msgs ({session['last_saved'][:10]})\n"
         
@@ -178,27 +178,27 @@ class TUISlashCommands:
             filename += '.md'
         
         if self.history_manager.export_session("default", filename):
-            self.output(f"📄 Exportado a: {filename}", "success")
+            self.output(f"📄 Exported to: {filename}", "success")
         else:
-            self.output("❌ Error exportando", "error")
+            self.output("❌ Error exporting", "error")
     
     async def _cmd_help(self, args: str, chat_history: List[Dict]):
         """Show help."""
-        help_text = """📚 Comandos disponibles:
+        help_text = """📚 Available commands:
 
-/status    - Ver uso de tokens y estado
-/new       - Nueva conversación (borra historial)
-/clear     - Alias de /new
-/unload    - Descargar modelos de RAM
-/save [nombre]     - Guardar sesión
-/load [nombre]     - Cargar sesión
-/sessions  - Listar sesiones guardadas
-/export [archivo]  - Exportar a markdown
-/help      - Mostrar esta ayuda
+/status    - View token usage and status
+/new       - New conversation (clears history)
+/clear     - Alias for /new
+/unload    - Unload models from RAM
+/save [name]     - Save session
+/load [name]     - Load session
+/sessions  - List saved sessions
+/export [file]   - Export to markdown
+/help      - Show this help
 
-Comandos del bot:
-• Escribe mensajes normalmente
-• El bot responde con el LLM
-• Soporta :::memory:::, :::cron:::, etc."""
+Bot commands:
+• Type messages normally
+• The bot responds with the LLM
+• Supports :::memory:::, :::cron:::, etc."""
         
         self.output(help_text, "info")

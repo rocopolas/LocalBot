@@ -101,7 +101,7 @@ async def fetch_emails_last_24h() -> list[dict]:
                 
                 # Extract info
                 from_header = decode_mime_header(msg.get("From", ""))
-                subject = decode_mime_header(msg.get("Subject", "(Sin asunto)"))
+                subject = decode_mime_header(msg.get("Subject", "(No subject)"))
                 date_header = msg.get("Date", "")
                 body_snippet = get_email_body(msg)
                 
@@ -117,9 +117,9 @@ async def fetch_emails_last_24h() -> list[dict]:
         mail.logout()
         
     except imaplib.IMAP4.error as e:
-        return [{"error": f"Error de autenticación IMAP: {str(e)}"}]
+        return [{"error": f"IMAP authentication error: {str(e)}"}]
     except Exception as e:
-        return [{"error": f"Error conectando a Gmail: {str(e)}"}]
+        return [{"error": f"Error connecting to Gmail: {str(e)}"}]
     
     return emails
 
@@ -127,20 +127,20 @@ async def fetch_emails_last_24h() -> list[dict]:
 def format_emails_for_llm(emails: list[dict]) -> str:
     """Formats email list for LLM analysis."""
     if not emails:
-        return "No hay emails nuevos en las últimas 24 horas."
+        return "No new emails in the last 24 hours."
     
     if "error" in emails[0]:
         return emails[0]["error"]
     
-    lines = [f"📬 **{len(emails)} emails recibidos en las últimas 24 horas:**\n"]
+    lines = [f"📬 **{len(emails)} emails received in the last 24 hours:**\n"]
     
     for i, email_data in enumerate(emails, 1):
         lines.append(f"---\n**Email {i}:**")
-        lines.append(f"- De: {email_data['from']}")
-        lines.append(f"- Asunto: {email_data['subject']}")
-        lines.append(f"- Fecha: {email_data['date']}")
+        lines.append(f"- From: {email_data['from']}")
+        lines.append(f"- Subject: {email_data['subject']}")
+        lines.append(f"- Date: {email_data['date']}")
         if email_data.get('snippet'):
-            lines.append(f"- Extracto: {email_data['snippet'][:200]}...")
+            lines.append(f"- Excerpt: {email_data['snippet'][:200]}...")
         lines.append("")
     
     return "\n".join(lines)

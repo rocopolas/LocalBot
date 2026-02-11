@@ -49,7 +49,7 @@ class EmailDigestJob(BackgroundJob):
             if target_chat:
                 await context.bot.send_message(
                     target_chat,
-                    "⚠️ Gmail no está configurado. Verifica las variables GMAIL_USER y GMAIL_APP_PASSWORD en el archivo .env"
+                    "⚠️ Gmail is not configured. Check the GMAIL_USER and GMAIL_APP_PASSWORD variables in the .env file"
                 )
             return
         
@@ -67,14 +67,14 @@ class EmailDigestJob(BackgroundJob):
             # Send status message
             status_msg = await context.bot.send_message(
                 target_chat,
-                "📧 Obteniendo emails del último día..."
+                "📧 Fetching emails from the last day..."
             )
             
             # Fetch emails
             emails = await fetch_emails_last_24h()
             
             if not emails:
-                await status_msg.edit_text("📭 No hay emails nuevos en las últimas 24 horas.")
+                await status_msg.edit_text("📭 No new emails in the last 24 hours.")
                 self.email_digest_running = False
                 return
             
@@ -84,7 +84,7 @@ class EmailDigestJob(BackgroundJob):
                 self.email_digest_running = False
                 return
             
-            await status_msg.edit_text(f"🧠 Analizando {len(emails)} emails con IA...")
+            await status_msg.edit_text(f"🧠 Analyzing {len(emails)} emails with AI...")
             
             # Format emails for LLM
             emails_text = format_emails_for_llm(emails)
@@ -104,7 +104,7 @@ class EmailDigestJob(BackgroundJob):
             try:
                 await context.bot.send_message(
                     target_chat,
-                    f"❌ Error al generar el resumen de emails: {str(e)}"
+                    f"❌ Error generating email digest: {str(e)}"
                 )
             except:
                 pass
@@ -112,29 +112,29 @@ class EmailDigestJob(BackgroundJob):
             self.email_digest_running = False
     
     def _convert_to_telegram_markdown(self, text: str) -> str:
-        """Convierte Markdown estándar a formato compatible con Telegram."""
-        # Convertir headers (# ## ###) a negrita
+        """Convert standard Markdown to Telegram-compatible format."""
+        # Convert headers (# ## ###) to bold
         text = re.sub(r'^#{3,6}\s+(.+)$', r'*\1*', text, flags=re.MULTILINE)
         text = re.sub(r'^##\s+(.+)$', r'*\1*', text, flags=re.MULTILINE)
         text = re.sub(r'^#\s+(.+)$', r'*\1*', text, flags=re.MULTILINE)
         
-        # Convertir listas con - a emojis
+        # Convert lists with - to emoji bullets
         text = re.sub(r'^-\s+', '• ', text, flags=re.MULTILINE)
         text = re.sub(r'^\*\s+', '• ', text, flags=re.MULTILINE)
         text = re.sub(r'^\+\s+', '• ', text, flags=re.MULTILINE)
         
-        # Asegurar que ** esté correctamente formateado (sin espacios internos)
+        # Ensure ** is correctly formatted (no internal spaces)
         text = re.sub(r'\*\*\s+', '**', text)
         text = re.sub(r'\s+\*\*', '**', text)
         
-        # Agregar espacio después de emojis seguidos de texto (pero no emojis sueltos)
+        # Add space after emojis followed by text (but not standalone emojis)
         text = re.sub(r'([📁📧📅⏰⚠️❗✅🔗📌🛒💸🎵📢⚙️🔍📊📈])([a-zA-ZáéíóúÁÉÍÓÚñÑ])', r'\1 \2', text)
         
-        # Asegurar que haya líneas en blanco entre secciones (emoji + título en negrita)
-        # Agregar línea en blanco antes de líneas que comienzan con emoji + asterisco
+        # Ensure blank lines between sections (emoji + bold title)
+        # Add blank line before lines starting with emoji + asterisk
         text = re.sub(r'([^\n])(\n)([📁📧📅⏰⚠️❗✅🔗📌🛒💸🎵📢⚙️🔍📊📈]\s*\*)', r'\1\n\n\3', text)
         
-        # Agregar línea en blanco después de títulos en negrita
+        # Add blank line after bold titles
         text = re.sub(r'(\*[^*]+\*)(\n)([^\n])', r'\1\n\n\3', text)
         
         return text
@@ -144,59 +144,67 @@ class EmailDigestJob(BackgroundJob):
         model = get_config("MODEL")
         client = OllamaClient()
         
-        system_prompt = """Eres un asistente especializado en analizar emails y crear resúmenes concisos.
+        system_prompt = """You are an assistant specialized in analyzing emails and creating clean, structured digests.
 
-REGLAS DE FORMATO OBLIGATORIAS (sintaxis de Telegram):
-- Usa *texto* para negrita (títulos y énfasis importantes)
-- Usa _texto_ para cursiva (opcional)
-- Usa `texto` para código o valores técnicos
-- Usa emojis al inicio de secciones: 📁 📧 ⏰ ❗ ✅
-- NO uses # ## ### para títulos (usa *título* en negrita)
-- NO uses listas con guiones (usa • con emojis)
-- Mantén el formato simple y compatible con Telegram
+        MANDATORY FORMAT RULES:
+        1. Group emails by category using the 📁 emoji and a bold title (e.g., 📁 * Category Name *).
+        2. Inside each category, list emails using the 📧 emoji, bold sender name, and a bullet point • with the summary.
+        3. If there are multiple emails from the same sender in the same category, mention "(X emails)" in the summary.
+        4. At the very end, add a "⚠️ * Actions Needed *" section with a bulleted list of items requiring user attention.
+        5. DO NOT include a "Summary" or "Introduction" text. Start directly with the first category.
+        6. Use the exact structure below.
 
-REGLAS DE ESPACIADO CRÍTICO:
-- DEJA UNA LÍNEA EN BLANCO entre cada sección/email diferente
-- DEJA UNA LÍNEA EN BLANCO después de cada título en negrita
-- DEJA UNA LÍNEA EN BLANCO antes de las listas con •
-- Agrega un ESPACIO después de cada emoji
-- NUNCA juntes el emoji con el texto: ❌ *📁Carpeta* ✅ *📁 Carpeta*
+        STRUCTURE EXAMPLE:
+        📁 * Security *
+        📧 * PayPal *
+        • Suspicious login attempt detected
 
-Ejemplo correcto:
-📁 * Trabajo *
+        📁 * Newsletters *
+        📧 * The Verge *
+        • New iPhone review and tech updates
+        📧 * Morning Brew *
+        • Market recap (2 emails)
 
-• Email de jefe
-• Reunión a las 3pm
+        ⚠️ * Actions Needed *
+        • Verify PayPal login
+        • Cancel unused subscription
 
-📧 * Personal *
+        CATEGORIES TO USE (adapt as needed):
+        - Security
+        - Service Updates
+        - Product Updates
+        - Promotions
+        - Financial Updates
+        - Service Reminders
+        - Product Announcements
+        - Personal Communications
+        - News/Updates
 
-• Mensaje de familia
+        Your task:
+        - Filter out spam/irrelevant emails if possible, but keep anything that might be useful.
+        - Be concise.
+        - Summarize the core message of each email in 1 line if possible.
+        - If an email implies an action (reset password, pay bill), add it to "Actions Needed".
 
-Tu tarea es:
-1. Identificar emails importantes que requieran atención
-2. Agrupar emails por categorías usando emojis
-3. Destacar fechas límite, reuniones o acciones requeridas
-4. Ser breve y directo
-
-Responde en español."""
+        Respond in English."""
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Analiza estos emails del último día y crea un resumen:\n\n{emails_text}"}
+            {"role": "user", "content": f"Analyze these emails from the last day and create a summary:\n\n{emails_text}"}
         ]
         
         summary = ""
         async for chunk in client.stream_chat(model, messages):
             summary += chunk
         
-        # Convertir a formato Telegram y aplicar formato del bot
+        # Convert to Telegram format and apply bot formatting
         # summary = self._convert_to_telegram_markdown(summary) # Legacy
         summary = format_bot_response(summary)
         
         # Format the response
-        header = f"📧 *Resumen de Emails - {datetime.now().strftime('%d/%m/%Y')}*\n\n"
+        header = f"📧 *Email Digest - {datetime.now().strftime('%d/%m/%Y')}*\n\n"
         
         if not summary.strip():
-            return header + "No se encontraron emails importantes en las últimas 24 horas."
+            return header + "No important emails found in the last 24 hours."
         
         return header + summary

@@ -57,7 +57,7 @@ class MessageWidget(Markdown):
         content = re.sub(r'\x1b\[[0-9;]*m', '', content)
         
         # Format think blocks
-        content = content.replace("<think>", "> 🧠 **Pensando:**\n> ")
+        content = content.replace("<think>", "> 🧠 **Thinking:**\n> ")
         content = content.replace("</think>", "\n\n")
         
         # Add timestamp
@@ -135,7 +135,7 @@ class FemtoBotApp(App):
         yield Header()
         yield ScrollableContainer(id="chat-container")
         yield Input(
-            placeholder="Escribe tu mensaje... (Escribe 'salir' o /quit para cerrar)",
+            placeholder="Type your message... (Type 'exit' or /quit to close)",
             id="chat-input"
         )
         yield Footer()
@@ -158,8 +158,8 @@ class FemtoBotApp(App):
         
         # Show welcome message
         self._output_message(
-            "🤖 FemtoBot TUI iniciado\n"
-            "Escribe /help para ver comandos disponibles",
+            "🤖 FemtoBot TUI started\n"
+            "Type /help to see available commands",
             "info"
         )
 
@@ -228,7 +228,7 @@ class FemtoBotApp(App):
         handled = await self.slash_commands.handle(command, args, history)
         
         if not handled:
-            await self._add_system_message(f"❌ Comando desconocido: /{command}", "error")
+            await self._add_system_message(f"❌ Unknown command: /{command}", "error")
     
     async def _handle_user_message(self, message: str, container):
         """Handle regular user message."""
@@ -240,9 +240,9 @@ class FemtoBotApp(App):
         # Prepare context
         current_time = datetime.now().strftime("%H:%M del %d/%m/%Y")
         from utils.cron_utils import CronUtils
-        crontab = "\n".join(CronUtils.get_crontab()) or "(vacío)"
+        crontab = CronUtils.get_readable_agenda()
         
-        context_message = f"{message} [Sistema: La hora actual es {current_time}. Agenda:\n{crontab}]"
+        context_message = f"{message} [System: Current time is {current_time}. Schedule:\n{crontab}]"
         
         # Add to history
         await self.chat_manager.append_message(

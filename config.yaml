@@ -19,14 +19,14 @@ INSTRUCTIONS_FILE: "data/instructions.md"
 # Luces WIZ (nombre: IP o lista de IPs)
 WIZ_LIGHTS:
   # Luces individuales
-  luz_esquina: "192.168.0.121"
-  luz_solitaria: "192.168.0.63"
-  luz_cama: "192.168.0.115"
+  luz_esquina: "192.168.0.122"
+  luz_solitaria: "192.168.0.64"
+  luz_cama: "192.168.0.117"
   
   pieza: 
-    - "192.168.0.121"
-    - "192.168.0.63"
-    - "192.168.0.115"
+    - "192.168.0.122"
+    - "192.168.0.64"
+    - "192.168.0.117"
 
 # RAG / Memoria
 RAG:

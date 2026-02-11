@@ -57,13 +57,13 @@ class CommandService:
             target_esc = escape_code(target)
             await context.bot.send_message(
                 chat_id,
-                f"🗑️ Eliminando: `{target_esc}`",
+                f"🗑️ Removing: `{target_esc}`",
                 parse_mode="Markdown"
             )
             if CronUtils.delete_job(target):
-                await context.bot.send_message(chat_id, "✅ Tarea eliminada.")
+                await context.bot.send_message(chat_id, "✅ Task removed.")
             else:
-                await context.bot.send_message(chat_id, "⚠️ No se encontraron tareas.")
+                await context.bot.send_message(chat_id, "⚠️ No matching tasks found.")
         return processed
 
     def _unescape_telegram_markdown(self, text: str) -> str:
@@ -85,7 +85,7 @@ class CommandService:
             parts = cron_content.split(None, 5)
             if len(parts) < 6:
                 logger.error(f"[CRON] Invalid cron format: {cron_content}")
-                await context.bot.send_message(chat_id, "❌ Error: Formato cron inválido (se esperan: tipo min hora dia mes nombre).")
+                await context.bot.send_message(chat_id, "❌ Error: Invalid cron format (expected: type min hour day month name).")
                 continue
             
             tipo = parts[0].lower()  # "unico" or "recurrente"
@@ -94,7 +94,7 @@ class CommandService:
             
             if tipo not in ("unico", "recurrente"):
                 logger.error(f"[CRON] Invalid type: {tipo}")
-                await context.bot.send_message(chat_id, f"❌ Error: Tipo inválido '{tipo}'. Usa 'unico' o 'recurrente'.")
+                await context.bot.send_message(chat_id, f"❌ Error: Invalid type '{tipo}'. Use 'unico' or 'recurrente'.")
                 continue
             
             schedule = f"{min_f} {hour_f} {day_f} {month_f} *"
@@ -115,15 +115,15 @@ class CommandService:
             
             await context.bot.send_message(
                 chat_id,
-                f"⚠️ Agregando ({tipo}): `{sched_esc}` — {nombre_esc}",
+                f"⚠️ Adding ({tipo}): `{sched_esc}` — {nombre_esc}",
                 parse_mode="Markdown"
             )
             
             success = CronUtils.add_job(schedule, command)
             if success:
-                await context.bot.send_message(chat_id, "✅ Tarea agregada.")
+                await context.bot.send_message(chat_id, "✅ Task added.")
             else:
-                await context.bot.send_message(chat_id, "❌ Error al agregar tarea.")
+                await context.bot.send_message(chat_id, "❌ Error adding task.")
         return processed
 
     async def _handle_memory_delete(self, text: str, chat_id: int, context) -> bool:
@@ -134,11 +134,11 @@ class CommandService:
             if target:
                 try:
                     if await self.vector_manager.delete_memory(target):
-                        await context.bot.send_message(chat_id, f"🗑️ Memoria borrada: _{target}_", parse_mode="Markdown")
+                        await context.bot.send_message(chat_id, f"🗑️ Memory deleted: _{target}_", parse_mode="Markdown")
                     else:
-                        await context.bot.send_message(chat_id, f"⚠️ No encontré recuerdos similares a: _{target}_", parse_mode="Markdown")
+                        await context.bot.send_message(chat_id, f"⚠️ No similar memories found for: _{target}_", parse_mode="Markdown")
                 except Exception as e:
-                    await context.bot.send_message(chat_id, f"⚠️ Error borrando memoria: {str(e)}")
+                    await context.bot.send_message(chat_id, f"⚠️ Error deleting memory: {str(e)}")
         return processed
 
     async def _handle_memory_add(self, text: str, chat_id: int, context) -> bool:
@@ -149,9 +149,9 @@ class CommandService:
             if content:
                 try:
                     if await self.vector_manager.add_memory(content):
-                        await context.bot.send_message(chat_id, f"💾 Guardado (DB): _{content}_", parse_mode="Markdown")
+                        await context.bot.send_message(chat_id, f"💾 Saved (DB): _{content}_", parse_mode="Markdown")
                     else:
-                        await context.bot.send_message(chat_id, "❌ Error al guardar en DB.")
+                        await context.bot.send_message(chat_id, "❌ Error saving to DB.")
                 except Exception as e:
                     await context.bot.send_message(chat_id, f"⚠️ Error: {str(e)}")
         return processed

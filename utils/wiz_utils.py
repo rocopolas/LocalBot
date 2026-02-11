@@ -45,8 +45,22 @@ def get_all_lights() -> dict:
     """Get all configured lights."""
     return get_config("WIZ_LIGHTS") or {}
 
-# Color name to RGB mapping
+# Color name to RGB mapping (supports both English and Spanish)
 COLOR_MAP = {
+    # English
+    "red": (255, 0, 0),
+    "green": (0, 255, 0),
+    "blue": (0, 0, 255),
+    "yellow": (255, 255, 0),
+    "orange": (255, 165, 0),
+    "pink": (255, 105, 180),
+    "purple": (128, 0, 128),
+    "violet": (238, 130, 238),
+    "skyblue": (135, 206, 235),
+    "white": None,  # Use color temperature instead
+    "warm": None,
+    "cool": None,
+    # Spanish
     "rojo": (255, 0, 0),
     "verde": (0, 255, 0),
     "azul": (0, 0, 255),
@@ -56,7 +70,7 @@ COLOR_MAP = {
     "morado": (128, 0, 128),
     "violeta": (238, 130, 238),
     "celeste": (135, 206, 235),
-    "blanco": None,  # Use color temperature instead
+    "blanco": None,
     "calido": None,
     "frio": None,
 }
@@ -73,9 +87,9 @@ async def turn_on_light(ip: str, brightness: int = 100, color: str = None) -> bo
             rgb = COLOR_MAP[color.lower()]
             if rgb:
                 await light.turn_on(_PilotBuilder(rgb=rgb, brightness=brightness))
-            elif color.lower() == "calido":
+            elif color.lower() in ("calido", "warm"):
                 await light.turn_on(_PilotBuilder(colortemp=2700, brightness=brightness))
-            elif color.lower() == "frio":
+            elif color.lower() in ("frio", "cool"):
                 await light.turn_on(_PilotBuilder(colortemp=6500, brightness=brightness))
             else:
                 await light.turn_on(_PilotBuilder(colortemp=4000, brightness=brightness))
@@ -110,10 +124,10 @@ async def control_light(name: str, action: str, value: str = None) -> str:
     lights = get_all_lights()
     
     if not lights:
-        return "⚠️ No hay luces configuradas"
+        return "⚠️ No lights configured"
     
-    # Handle "todas" (all lights) - flatten all IPs
-    if name.lower() == "todas":
+    # Handle "todas"/"all" (all lights) - flatten all IPs
+    if name.lower() in ("todas", "all"):
         all_ips = []
         for v in lights.values():
             if isinstance(v, list):
@@ -121,23 +135,23 @@ async def control_light(name: str, action: str, value: str = None) -> str:
             else:
                 all_ips.append(v)
         ips = all_ips
-        display_name = "Todas las luces"
+        display_name = "All lights"
     else:
         # Get IPs for the named light/group
         ips = get_light_ips(name)
         if not ips:
             available = ", ".join(lights.keys())
-            return f"⚠️ Luz '{name}' no encontrada. Disponibles: {available}"
-        display_name = f"Luz {name}"
+            return f"⚠️ Light '{name}' not found. Available: {available}"
+        display_name = f"Light {name}"
     
     # Apply action to all IPs
     results = []
     for ip in ips:
-        if action == "apagar":
+        if action in ("apagar", "off"):
             success = await turn_off_light(ip)
-        elif action == "encender":
+        elif action in ("encender", "on"):
             success = await turn_on_light(ip)
-        elif action == "brillo" and value:
+        elif action in ("brillo", "brightness") and value:
             level = max(0, min(100, int(value)))
             success = await turn_on_light(ip, brightness=level)
         elif action == "color" and value:
@@ -148,15 +162,15 @@ async def control_light(name: str, action: str, value: str = None) -> str:
     
     # Build response
     if all(results):
-        if action == "apagar":
-            return f"💡 {display_name}: apagada"
-        elif action == "encender":
-            return f"💡 {display_name}: encendida"
-        elif action == "brillo":
-            return f"💡 {display_name}: brillo {value}%"
+        if action in ("apagar", "off"):
+            return f"💡 {display_name}: off"
+        elif action in ("encender", "on"):
+            return f"💡 {display_name}: on"
+        elif action in ("brillo", "brightness"):
+            return f"💡 {display_name}: brightness {value}%"
         elif action == "color":
             return f"💡 {display_name}: color {value}"
     elif any(results):
-        return f"⚠️ {display_name}: algunas luces fallaron"
+        return f"⚠️ {display_name}: some lights failed"
     else:
-        return f"❌ Error controlando {display_name}"
+        return f"❌ Error controlling {display_name}"

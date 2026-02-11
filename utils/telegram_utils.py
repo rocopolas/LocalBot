@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 async def telegramify_content(text: str, max_length: int = 4090):
     """
-    Usa telegramify-markdown v1.0.0+ para convertir y dividir el mensaje.
-    Retorna objetos de telegramify con diferentes tipos de contenido (TEXT, PHOTO, FILE).
+    Uses telegramify-markdown v1.0.0+ to convert and split the message.
+    Returns telegramify objects with different content types (TEXT, PHOTO, FILE).
     """
     try:
         from telegramify_markdown import telegramify
@@ -17,7 +17,7 @@ async def telegramify_content(text: str, max_length: int = 4090):
         return results
         
     except ImportError:
-        logger.warning("Módulo telegramify_markdown no instalado. Usando fallback.")
+        logger.warning("telegramify_markdown module not installed. Using fallback.")
         return split_message(text)
     except Exception as e:
         logger.error(f"Error en telegramify: {e}", exc_info=True)
@@ -25,29 +25,29 @@ async def telegramify_content(text: str, max_length: int = 4090):
 
 
 def escape_markdown(text: str) -> str:
-    """Escapa caracteres especiales de Markdown para Telegram."""
+    """Escapes Markdown special characters for Telegram."""
     escape_chars = r'_*[]()~`>#+-=|{}.!'
     return re.sub(f'([{re.escape(escape_chars)}])', lambda m: '\\' + m.group(1), text)
 
 
 def escape_code(text: str) -> str:
-    """Escapa solo backticks y backslashes para bloques de código."""
+    """Escapes only backticks and backslashes for code blocks."""
     return re.sub(r'([`\\])', lambda m: '\\' + m.group(1), text)
 
 
 async def send_telegramify_results(context, chat_id, results, placeholder_msg=None):
     """
-    Envía resultados de telegramify_markdown v1.0.0+ manejando diferentes tipos de contenido.
-    Usa entities en lugar de parse_mode.
+    Sends telegramify_markdown v1.0.0+ results handling different content types.
+    Uses entities instead of parse_mode.
     
     Args:
-        context: Contexto del bot de Telegram
-        chat_id: ID del chat
-        results: Lista de objetos de telegramify (Text, File, Photo)
-        placeholder_msg: Mensaje placeholder opcional para editar
+        context: Telegram bot context
+        chat_id: Chat ID
+        results: List of telegramify objects (Text, File, Photo)
+        placeholder_msg: Optional placeholder message to edit
     
     Returns:
-        Lista de mensajes enviados
+        List of sent messages
     """
     from telegramify_markdown import ContentType
     import io
@@ -57,7 +57,7 @@ async def send_telegramify_results(context, chat_id, results, placeholder_msg=No
     
     for item in results:
         try:
-            # Verificar si es string (fallback de split_message)
+            # Check if it's a string (split_message fallback)
             if isinstance(item, str):
                 if not first_item_sent and placeholder_msg:
                     await placeholder_msg.edit_text(item)
@@ -68,9 +68,9 @@ async def send_telegramify_results(context, chat_id, results, placeholder_msg=No
                     sent_messages.append(msg)
                 continue
             
-            # Manejar objetos de telegramify v1.0.0+
+            # Handle telegramify v1.0.0+ objects
             if item.content_type == ContentType.TEXT:
-                # Convertir entities a diccionarios
+                # Convert entities to dictionaries
                 entities = [e.to_dict() for e in item.entities] if item.entities else None
                 
                 if not first_item_sent and placeholder_msg:
@@ -89,7 +89,7 @@ async def send_telegramify_results(context, chat_id, results, placeholder_msg=No
                 photo_file = io.BytesIO(item.file_data)
                 photo_file.name = item.file_name
                 
-                # Convertir caption entities si existen
+                # Convert caption entities if they exist
                 caption_entities = None
                 if hasattr(item, 'caption_entities') and item.caption_entities:
                     caption_entities = [e.to_dict() for e in item.caption_entities]
@@ -119,7 +119,7 @@ async def send_telegramify_results(context, chat_id, results, placeholder_msg=No
                 doc_file = io.BytesIO(item.file_data)
                 doc_file.name = item.file_name
                 
-                # Convertir caption entities si existen
+                # Convert caption entities if they exist
                 caption_entities = None
                 if hasattr(item, 'caption_entities') and item.caption_entities:
                     caption_entities = [e.to_dict() for e in item.caption_entities]
@@ -146,8 +146,8 @@ async def send_telegramify_results(context, chat_id, results, placeholder_msg=No
                     sent_messages.append(msg)
                     
         except Exception as e:
-            logger.error(f"Error enviando item de telegramify: {e}", exc_info=True)
-            # Fallback: intentar enviar como texto simple
+            logger.error(f"Error sending telegramify item: {e}", exc_info=True)
+            # Fallback: try to send as plain text
             if hasattr(item, 'text'):
                 msg = await context.bot.send_message(chat_id, item.text)
                 sent_messages.append(msg)
@@ -210,7 +210,7 @@ def format_bot_response(response: str) -> str:
     
     # Handle think tags - format as quotes or remove
     if "<think>" in formatted:
-        formatted = formatted.replace("<think>", "> 🧠 **Pensando:**\n> ")
+        formatted = formatted.replace("<think>", "> 🧠 **Thinking:**\n> ")
         formatted = formatted.replace("</think>", "\n\n")
         # Remove any remaining think content
         formatted = re.sub(r'<think>.*?</think>', '', formatted, flags=re.DOTALL)

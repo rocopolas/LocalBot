@@ -379,3 +379,97 @@ class CronUtils:
                 warnings.append(f"Line {i}: Suspicious command - {error_msg}")
         
         return warnings
+    @staticmethod
+    def get_readable_agenda() -> str:
+        """
+        Returns a human-readable string of the current agenda.
+        Parses crontab lines and converts them to a friendly format.
+        """
+        jobs = CronUtils.get_crontab()
+        if not jobs:
+            return "No scheduled tasks."
+            
+        readable_lines = []
+        now = datetime.now()
+        
+        # Month names mapping (English)
+        months = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        
+        for job in jobs:
+            if not job.strip() or job.strip().startswith('#'):
+                continue
+                
+            parts = job.split(None, 5)
+            if len(parts) < 6:
+                continue
+                
+            min_str, hour_str, day_str, month_str, dow_str, command = parts
+            
+            # Extract task name from command
+            # Look for notify-send "Name" or echo "Name"
+            task_name = "Unknown task"
+            name_match = re.search(r'(?:notify-send|echo)\s+"([^"]+)"', command)
+            if name_match:
+                task_name = name_match.group(1)
+            else:
+                # Try simple echo without quotes
+                name_match_simple = re.search(r'(?:notify-send|echo)\s+([^"\s]+)', command)
+                if name_match_simple:
+                    task_name = name_match_simple.group(1)
+            
+            # Remove emoji at the end if present to clean it up further? 
+            # No, keep emoji as user requested.
+            
+            # -- Parse Schedule --
+            
+            # 1. Check for explicit year guard [ "$(date +%Y)" = "2026" ]
+            year_match = re.search(r'\[ "\$\(date \\?\+%Y\)" = "(\d{4})" \]', command)
+            year = int(year_match.group(1)) if year_match else None
+            
+            readable_time = ""
+            
+            try:
+                # One-time event (specific day/month)
+                if day_str != '*' and month_str != '*':
+                    day = int(day_str)
+                    month = int(month_str)
+                    month_name = months[month]
+                    
+                    if year:
+                        date_str = f"{month_name} {day}, {year}"
+                    else:
+                        date_str = f"{month_name} {day}"
+                        
+                    readable_time = f"{date_str} at {hour_str}:{min_str.zfill(2)}"
+                    
+                # Recurring: Every day
+                elif day_str == '*' and month_str == '*' and dow_str == '*':
+                    readable_time = f"Every day at {hour_str}:{min_str.zfill(2)}"
+                    
+                # Recurring: Every week (specific DOW)
+                elif day_str == '*' and month_str == '*' and dow_str != '*':
+                     # 0=Sun, 1=Mon...
+                     dows = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                     try:
+                         dow_name = dows[int(dow_str) % 7]
+                         readable_time = f"Every {dow_name} at {hour_str}:{min_str.zfill(2)}"
+                     except:
+                         readable_time = f"Exotic recursive schedule ({min_str} {hour_str} {day_str} {month_str} {dow_str})"
+
+                # Recurring: Monthly (Every 1st of month)
+                elif day_str != '*' and month_str == '*':
+                    readable_time = f"Every {day_str}th of the month at {hour_str}:{min_str.zfill(2)}"
+                    
+                else:
+                    readable_time = f"Schedule: {min_str} {hour_str} {day_str} {month_str} {dow_str}"
+                    
+                readable_lines.append(f"• {readable_time} -> {task_name}")
+                
+            except Exception as e:
+                logger.warning(f"Error parsing job for agenda: {job} - {e}")
+                readable_lines.append(f"• Raw task: {min_str} {hour_str} {day_str} {month_str} {dow_str} -> {task_name}")
+
+        if not readable_lines:
+            return "No scheduled tasks."
+            
+        return "\n".join(readable_lines)
