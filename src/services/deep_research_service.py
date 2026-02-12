@@ -206,6 +206,17 @@ Format the report in Markdown.
         # Process content line by line (simple markdown parser)
         lines = markdown_content.split('\n')
         
+        def add_styled_text(parent_element, text):
+            """Helper to parse **bold** and add to element"""
+            parts = re.split(r'(\*\*.*?\*\*)', text)
+            for part in parts:
+                if part.startswith("**") and part.endswith("**"):
+                    s = Span(stylename=s_bold)
+                    addTextToElement(s, part[2:-2])
+                    parent_element.addElement(s)
+                else:
+                    addTextToElement(parent_element, part)
+
         for line in lines:
             line = line.strip()
             if not line:
@@ -225,21 +236,15 @@ Format the report in Markdown.
                  h = H(outlinelevel=3, stylename=s_header2, text=clean_text)
                  textdoc.text.addElement(h)
             elif line.startswith("- ") or line.startswith("* "):
-                # Simple list handling
+                # List handling with bold support
                 p = P(stylename=s_text)
-                addTextToElement(p, "• " + line[2:])
+                # Add bullet manually as we are using paragraphs for lists (simple approach)
+                addTextToElement(p, "• ")
+                add_styled_text(p, line[2:])
                 textdoc.text.addElement(p)
             else:
                 p = P(stylename=s_text)
-                # Handle basic bold **text**
-                parts = re.split(r'(\*\*.*?\*\*)', line)
-                for part in parts:
-                    if part.startswith("**") and part.endswith("**"):
-                        s = Span(stylename=s_bold)
-                        addTextToElement(s, part[2:-2])
-                        p.addElement(s)
-                    else:
-                        addTextToElement(p, part)
+                add_styled_text(p, line)
                 textdoc.text.addElement(p)
                 
         textdoc.save(file_path)
