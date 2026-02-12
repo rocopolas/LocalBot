@@ -1,3 +1,0 @@
-FROM qwen3-vl:8b
-PARAMETER num_ctx 9000
-PARAMETER temperature 0.1

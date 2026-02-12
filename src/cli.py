@@ -13,6 +13,7 @@ from src.constants import CONFIG_DIR, DATA_DIR
 
 PID_FILE = os.path.join(CONFIG_DIR, "femtobot.pid")
 LOG_FILE = os.path.join(CONFIG_DIR, "femtobot.log")
+BOT_SCRIPT_NAME = "telegram_bot.py"
 
 # Colors
 GREEN = "green"
@@ -44,6 +45,95 @@ def _is_running(pid):
         return True
     except (ProcessLookupError, PermissionError):
         return False
+
+
+def _ensure_psutil():
+    """Ensure psutil is installed, install if missing."""
+    try:
+        import psutil
+        return psutil
+    except ImportError:
+        click.secho("⚠ Installing required dependency: psutil...", fg=YELLOW)
+        python = _get_python()
+        result = subprocess.run(
+            [python, "-m", "pip", "install", "psutil>=5.9.0", "--quiet"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            click.secho(f"✗ Failed to install psutil: {result.stderr}", fg=RED)
+            click.secho("  Please install manually: pip install psutil>=5.9.0", fg=YELLOW)
+            sys.exit(1)
+        # Reimport after installation
+        import psutil
+        click.secho("✓ psutil installed successfully", fg=GREEN)
+        return psutil
+
+
+def _kill_all_bot_processes():
+    """Kill all processes related to the bot including children."""
+    psutil = _ensure_psutil()
+    
+    killed = []
+    errors = []
+    
+    # Find all python processes running telegram_bot.py
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            pinfo = proc.info
+            if pinfo['name'] and 'python' in pinfo['name'].lower():
+                cmdline = ' '.join(pinfo['cmdline'] or [])
+                if BOT_SCRIPT_NAME in cmdline or 'femtobot' in cmdline:
+                    try:
+                        # Kill the process tree
+                        parent = psutil.Process(pinfo['pid'])
+                        children = parent.children(recursive=True)
+                        
+                        # Kill children first
+                        for child in children:
+                            try:
+                                child.terminate()
+                            except psutil.NoSuchProcess:
+                                pass
+                        
+                        # Wait for children
+                        gone, alive = psutil.wait_procs(children, timeout=2)
+                        
+                        # Force kill if still alive
+                        for child in alive:
+                            try:
+                                child.kill()
+                            except psutil.NoSuchProcess:
+                                pass
+                        
+                        # Kill parent
+                        parent.terminate()
+                        try:
+                            parent.wait(timeout=2)
+                        except psutil.TimeoutExpired:
+                            parent.kill()
+                        
+                        killed.append(pinfo['pid'])
+                    except Exception as e:
+                        errors.append(f"PID {pinfo['pid']}: {e}")
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    
+    # Also try to kill by PID file if exists
+    pid = _read_pid()
+    if pid and pid not in killed:
+        try:
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(1)
+            if _is_running(pid):
+                os.kill(pid, signal.SIGKILL)
+                time.sleep(0.5)
+        except ProcessLookupError:
+            pass
+        except Exception as e:
+            errors.append(f"PID file {pid}: {e}")
+    
+    return killed, errors
 
 
 def _get_python():
@@ -145,63 +235,138 @@ def start():
 
 @cli.command()
 def stop():
-    """Stop the running FemtoBot daemon."""
+    """Stop the running FemtoBot daemon (kills all processes)."""
     pid = _read_pid()
-
-    if not _is_running(pid):
+    
+    # Ensure psutil is available
+    psutil = _ensure_psutil()
+    
+    # Check if any bot processes are running
+    bot_procs = []
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            pinfo = proc.info
+            if pinfo['name'] and 'python' in pinfo['name'].lower():
+                cmdline = ' '.join(pinfo['cmdline'] or [])
+                if BOT_SCRIPT_NAME in cmdline or 'femtobot' in cmdline:
+                    bot_procs.append(pinfo['pid'])
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    
+    if not bot_procs and not _is_running(pid):
         click.secho("⚠ FemtoBot is not running", fg=YELLOW)
         # Clean stale PID file
         if os.path.exists(PID_FILE):
             os.remove(PID_FILE)
         return
 
-    click.secho(f"Stopping FemtoBot (PID {pid})...", fg=CYAN)
+    if bot_procs:
+        click.secho(f"Found {len(bot_procs)} bot process(es): {bot_procs}", fg=CYAN)
+    elif pid:
+        click.secho(f"Stopping FemtoBot (PID {pid})...", fg=CYAN)
 
-    try:
-        os.kill(pid, signal.SIGTERM)
-        # Wait for graceful shutdown
-        for _ in range(10):
-            if not _is_running(pid):
-                break
-            time.sleep(0.5)
-        else:
-            # Force kill if still running
-            click.secho("Forcing shutdown...", fg=YELLOW)
-            os.kill(pid, signal.SIGKILL)
-            time.sleep(0.5)
-    except ProcessLookupError:
-        pass
+    # Kill all bot processes
+    killed, errors = _kill_all_bot_processes()
+    
+    if killed:
+        click.secho(f"✓ Killed {len(killed)} process(es): {killed}", fg=GREEN)
+    
+    if errors:
+        click.secho(f"⚠ Errors during kill: {errors}", fg=YELLOW)
 
+    # Clean PID file
     if os.path.exists(PID_FILE):
         os.remove(PID_FILE)
-
-    click.secho("✓ FemtoBot stopped", fg=GREEN)
+    
+    # Double check no processes remain
+    time.sleep(0.5)
+    remaining = []
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            pinfo = proc.info
+            if pinfo['name'] and 'python' in pinfo['name'].lower():
+                cmdline = ' '.join(pinfo['cmdline'] or [])
+                if BOT_SCRIPT_NAME in cmdline or 'femtobot' in cmdline:
+                    remaining.append(pinfo['pid'])
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    
+    if remaining:
+        click.secho(f"✗ Warning: {len(remaining)} process(es) still alive: {remaining}", fg=RED)
+        click.secho("  You may need to kill them manually with: kill -9 " + " ".join(map(str, remaining)))
+    else:
+        click.secho("✓ FemtoBot stopped completely (0 processes remaining)", fg=GREEN)
 
 
 @cli.command()
 @click.pass_context
 def restart(ctx):
-    """Restart the FemtoBot daemon (stop + start)."""
-    # Stop
-    pid = _read_pid()
-    if _is_running(pid):
-        click.secho(f"Stopping FemtoBot (PID {pid})...", fg=CYAN)
+    """Restart the FemtoBot daemon (stop all processes + start)."""
+    # Ensure psutil is available
+    psutil = _ensure_psutil()
+    
+    # Check for existing processes
+    bot_procs = []
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
-            os.kill(pid, signal.SIGTERM)
-            for _ in range(10):
-                if not _is_running(pid):
-                    break
-                time.sleep(0.5)
-            else:
-                os.kill(pid, signal.SIGKILL)
-                time.sleep(0.5)
-        except ProcessLookupError:
-            pass
+            pinfo = proc.info
+            if pinfo['name'] and 'python' in pinfo['name'].lower():
+                cmdline = ' '.join(pinfo['cmdline'] or [])
+                if BOT_SCRIPT_NAME in cmdline or 'femtobot' in cmdline:
+                    bot_procs.append(pinfo['pid'])
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    
+    pid = _read_pid()
+    
+    # Stop all processes
+    if bot_procs or _is_running(pid):
+        if bot_procs:
+            click.secho(f"Stopping {len(bot_procs)} bot process(es): {bot_procs}...", fg=CYAN)
+        else:
+            click.secho(f"Stopping FemtoBot (PID {pid})...", fg=CYAN)
+        
+        killed, errors = _kill_all_bot_processes()
+        
+        if killed:
+            click.secho(f"✓ Killed {len(killed)} process(es)", fg=GREEN)
+        
+        if errors:
+            click.secho(f"⚠ Some errors occurred: {errors}", fg=YELLOW)
+        
         if os.path.exists(PID_FILE):
             os.remove(PID_FILE)
-        click.secho("✓ Stopped", fg=GREEN)
+        
+        # Wait to ensure all processes are dead
+        time.sleep(1)
+        
+        # Verify all processes are dead
+        remaining = []
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                pinfo = proc.info
+                if pinfo['name'] and 'python' in pinfo['name'].lower():
+                    cmdline = ' '.join(pinfo['cmdline'] or [])
+                    if BOT_SCRIPT_NAME in cmdline or 'femtobot' in cmdline:
+                        remaining.append(pinfo['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        if remaining:
+            click.secho(f"⚠ Warning: {len(remaining)} process(es) still alive, attempting force kill...", fg=YELLOW)
+            for rpid in remaining:
+                try:
+                    os.kill(rpid, signal.SIGKILL)
+                except:
+                    pass
+            time.sleep(0.5)
+        
+        click.secho("✓ All bot processes stopped", fg=GREEN)
+    else:
+        click.secho("⚠ No running bot processes found", fg=YELLOW)
 
     # Start
+    click.echo()
     ctx.invoke(start)
 
 

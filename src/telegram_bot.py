@@ -4,6 +4,8 @@ import re
 import sys
 import asyncio
 import logging
+import signal
+import atexit
 from datetime import datetime
 from dotenv import load_dotenv
 from telegram import Update
@@ -11,7 +13,7 @@ from telegram.ext import (
     ApplicationBuilder, ContextTypes,
     CommandHandler, MessageHandler, filters
 )
-from telegram.error import BadRequest
+from telegram.error import BadRequest, Conflict
 
 # Add parent directory to path
 # Add parent directory to path
@@ -101,6 +103,49 @@ command_service = CommandService(vector_manager, COMMAND_PATTERNS, CONFIG_DIR)
 # System instructions
 system_instructions = ""
 
+# PID file handling for single instance enforcement
+PID_FILE = os.path.join(PROJECT_ROOT, ".bot.pid")
+
+def cleanup_pid():
+    """Remove PID file on exit."""
+    try:
+        if os.path.exists(PID_FILE):
+            os.remove(PID_FILE)
+            logger.info("PID file cleaned up")
+    except Exception as e:
+        logger.error(f"Error cleaning up PID file: {e}")
+
+def kill_existing_bot():
+    """Kill existing bot instance if running."""
+    try:
+        if os.path.exists(PID_FILE):
+            with open(PID_FILE, 'r') as f:
+                old_pid = int(f.read().strip())
+            try:
+                os.kill(old_pid, signal.SIGTERM)
+                logger.info(f"Killed existing bot process (PID: {old_pid})")
+                # Wait a moment for the process to die
+                import time
+                time.sleep(2)
+            except ProcessLookupError:
+                logger.info(f"No process found with PID {old_pid}")
+            except PermissionError:
+                logger.warning(f"Permission denied to kill process {old_pid}")
+    except (ValueError, FileNotFoundError):
+        pass
+    except Exception as e:
+        logger.error(f"Error checking/killing existing bot: {e}")
+
+def write_pid():
+    """Write current PID to file."""
+    try:
+        with open(PID_FILE, 'w') as f:
+            f.write(str(os.getpid()))
+        atexit.register(cleanup_pid)
+        logger.info(f"PID file created: {os.getpid()}")
+    except Exception as e:
+        logger.error(f"Error writing PID file: {e}")
+
 
 def is_authorized(user_id: int) -> bool:
     """Check if a user is authorized."""
@@ -142,7 +187,7 @@ command_handlers = CommandHandlers(
 voice_handler = VoiceHandler(
     is_authorized_func=is_authorized,
     message_queue=message_queue,
-    queue_worker_func=None  # Will be set later
+    start_worker_func=None  # Will be set later
 )
 
 audio_handler = AudioHandler(is_authorized_func=is_authorized)
@@ -200,8 +245,14 @@ async def queue_worker():
         queue_worker_running = False
 
 
-# Set queue worker function for voice handler
-voice_handler.queue_worker = queue_worker
+# Set start_worker function for voice handler
+def start_worker_if_needed():
+    global queue_worker_running
+    if not queue_worker_running:
+        queue_worker_running = True
+        asyncio.create_task(queue_worker())
+
+voice_handler.start_worker = start_worker_if_needed
 
 
 @rate_limit(max_messages=10, window_seconds=60)
@@ -488,13 +539,21 @@ async def process_message_item(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Global error handler for unhandled exceptions."""
-    logger.error(f"Unhandled exception: {context.error}", exc_info=context.error)
+    error = context.error
+    
+    # Handle Conflict errors (another bot instance running)
+    if isinstance(error, Conflict):
+        logger.warning("Conflict detected - another bot instance is running. Retrying...")
+        # Don't propagate the error, let the bot retry
+        return
+    
+    logger.error(f"Unhandled exception: {error}", exc_info=error)
     # Try to notify the user
     if update and hasattr(update, 'effective_chat') and update.effective_chat:
         try:
             await context.bot.send_message(
                 update.effective_chat.id,
-                f"❌ Unexpected error: {context.error}"
+                f"❌ Unexpected error: {error}"
             )
         except Exception:
             pass
@@ -502,6 +561,10 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 def main():
     """Main entry point."""
+    # Kill any existing bot instance and write PID
+    kill_existing_bot()
+    write_pid()
+    
     # Load initial data
     load_instructions()
     
@@ -515,6 +578,7 @@ def main():
     application.add_handler(CommandHandler("status", command_handlers.status))
     application.add_handler(CommandHandler("unload", command_handlers.unload_models))
     application.add_handler(CommandHandler("restart", command_handlers.restart_bot))
+    application.add_handler(CommandHandler("stop", command_handlers.stop_bot))
     application.add_handler(CommandHandler("digest", command_handlers.email_digest))
     application.add_handler(CommandHandler("deep", command_handlers.deep_research))
     
@@ -569,7 +633,23 @@ def main():
         logger.info("Email digest job scheduled (runs daily at 4:00 AM)")
     
     logger.info("FemtoBot started successfully!")
-    application.run_polling()
+    
+    # Run with conflict retry logic
+    max_retries = 10
+    retry_delay = 3
+    
+    for attempt in range(max_retries):
+        try:
+            application.run_polling()
+            break  # Normal exit
+        except Conflict as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Conflict on attempt {attempt + 1}, retrying in {retry_delay}s...")
+                import time
+                time.sleep(retry_delay)
+            else:
+                logger.error("Max retries reached, could not start bot")
+                raise
 
 
 if __name__ == "__main__":

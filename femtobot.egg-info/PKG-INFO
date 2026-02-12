@@ -17,6 +17,9 @@ Requires-Dist: pymupdf
 Requires-Dist: python-docx
 Requires-Dist: pywizlight
 Requires-Dist: yt-dlp
+Requires-Dist: markdown
+Requires-Dist: psutil>=5.9.0
+
 
 
 ![FemtoBot Logo](https://files.catbox.moe/zhkn08.jpg)

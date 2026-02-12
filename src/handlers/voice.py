@@ -17,11 +17,10 @@ logger = logging.getLogger(__name__)
 class VoiceHandler:
     """Handler for voice messages."""
     
-    def __init__(self, is_authorized_func, message_queue, queue_worker_func):
+    def __init__(self, is_authorized_func, message_queue, start_worker_func=None):
         self.is_authorized = is_authorized_func
         self.message_queue = message_queue
-        self.queue_worker = queue_worker_func
-        self.queue_worker_running = False
+        self.start_worker = start_worker_func
     
     @rate_limit(max_messages=5, window_seconds=60)
     async def handle(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -103,9 +102,8 @@ class VoiceHandler:
                 needs_reply = not self.message_queue.empty()
                 await self.message_queue.put((update, context, needs_reply, transcription))
                 
-                if not self.queue_worker_running:
-                    self.queue_worker_running = True
-                    asyncio.create_task(self.queue_worker())
+                if self.start_worker:
+                    self.start_worker()
                     
         except Exception as e:
             logger.error(f"Error processing voice: {e}")

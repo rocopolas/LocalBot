@@ -12,3 +12,4 @@ pywizlight
 yt-dlp
 odfpy
 markdown
+psutil>=5.9.0

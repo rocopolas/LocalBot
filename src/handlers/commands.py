@@ -1,6 +1,7 @@
 """Command handlers for FemtoBot."""
 import os
 import sys
+import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
 import logging
@@ -172,7 +173,7 @@ class CommandHandlers:
     
     @rate_limit(max_messages=1, window_seconds=60)
     async def restart_bot(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle /restart command - restart bot process."""
+        """Handle /restart command - graceful shutdown, requires external restart."""
         user_id = update.effective_user.id
         
         if not self.is_authorized(user_id):
@@ -182,11 +183,53 @@ class CommandHandlers:
             )
             return
         
-        await update.message.reply_text("🔄 Restarting bot...")
-        logger.info(f"Bot restart initiated by user {user_id}")
+        await update.message.reply_text("🔄 Stopping bot gracefully...\nUse 'femtobot start' to restart it.")
+        logger.info(f"Bot shutdown initiated by user {user_id}")
         
-        # Restart the process
-        os.execl(sys.executable, sys.executable, *sys.argv)
+        # Clean shutdown - stop the application
+        try:
+            # Get the application from context
+            application = context.application
+            
+            # Schedule shutdown
+            async def shutdown():
+                await application.stop()
+                await application.shutdown()
+            
+            # Run shutdown in the event loop
+            asyncio.create_task(shutdown())
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+            # Force exit if graceful shutdown fails
+            os._exit(0)
+    
+    @rate_limit(max_messages=1, window_seconds=60)
+    async def stop_bot(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /stop command - stop bot completely."""
+        user_id = update.effective_user.id
+        
+        if not self.is_authorized(user_id):
+            await update.message.reply_text(
+                f"⛔ No tienes acceso.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        await update.message.reply_text("🛑 Stopping bot completely...\nUse 'femtobot start' to start it again.")
+        logger.info(f"Bot STOP initiated by user {user_id}")
+        
+        # Clean shutdown
+        try:
+            application = context.application
+            
+            async def shutdown():
+                await application.stop()
+                await application.shutdown()
+            
+            asyncio.create_task(shutdown())
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+            os._exit(0)
     
     @rate_limit(max_messages=1, window_seconds=60)
     async def email_digest(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
