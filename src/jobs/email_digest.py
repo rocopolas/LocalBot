@@ -37,9 +37,17 @@ class EmailDigestJob(BackgroundJob):
         if not self.notification_chat_id:
             return
         
-        # Check if it's 4:00 AM and we haven't run today
+        # Check if it's time to run
         now = datetime.now()
-        if now.hour == 4 and now.minute == 0 and not self.email_digest_running:
+        digest_time_str = get_config("EMAIL_DIGEST_TIME", "08:00")
+        
+        try:
+            target_hour, target_minute = map(int, digest_time_str.split(":"))
+        except ValueError:
+            logger.error(f"Invalid EMAIL_DIGEST_TIME format: {digest_time_str}. Defaulting to 08:00")
+            target_hour, target_minute = 8, 0
+
+        if now.hour == target_hour and now.minute == target_minute and not self.email_digest_running:
             await self._send_digest(context)
     
     async def run_manual(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int = None):
@@ -146,45 +154,20 @@ class EmailDigestJob(BackgroundJob):
         
         system_prompt = """You are an assistant specialized in analyzing emails and creating clean, structured digests.
 
-        MANDATORY FORMAT RULES:
-        1. Group emails by category using the 📁 emoji and a bold title (e.g., 📁 * Category Name *).
-        2. Inside each category, list emails using the 📧 emoji, bold sender name, and a bullet point • with the summary.
-        3. If there are multiple emails from the same sender in the same category, mention "(X emails)" in the summary.
-        4. At the very end, add a "⚠️ * Actions Needed *" section with a bulleted list of items requiring user attention.
-        5. DO NOT include a "Summary" or "Introduction" text. Start directly with the first category.
-        6. Use the exact structure below.
+        MANDATORY RULES:
+        1. **ONLY report Important emails.**
+        2. IGNORE newsletters, promotions, receipts, login alerts, spam, social media notifications, or anything that does not require direct user action or is not a personal message.
+        3. If no emails are important, respond with "No important emails found."
+        4. Use the following format for each important email:
+           📧 * Sender Name *
+           • Summary of the important message 
 
-        STRUCTURE EXAMPLE:
-        📁 * Security *
-        📧 * PayPal *
-        • Suspicious login attempt detected
-
-        📁 * Newsletters *
-        📧 * The Verge *
-        • New iPhone review and tech updates
-        📧 * Morning Brew *
-        • Market recap (2 emails)
-
-        ⚠️ * Actions Needed *
-        • Verify PayPal login
-        • Cancel unused subscription
-
-        CATEGORIES TO USE (adapt as needed):
-        - Security
-        - Service Updates
-        - Product Updates
-        - Promotions
-        - Financial Updates
-        - Service Reminders
-        - Product Announcements
-        - Personal Communications
-        - News/Updates
+        5. If there are action items, list them at the end under "⚠️ * Actions Needed *".
 
         Your task:
-        - Filter out spam/irrelevant emails if possible, but keep anything that might be useful.
+        - Strict filtering: Be very selective. Only show what matters.
         - Be concise.
-        - Summarize the core message of each email in 1 line if possible.
-        - If an email implies an action (reset password, pay bill), add it to "Actions Needed".
+        - Group by sender if multiple important emails come from the same person.
 
         Respond in English."""
 
