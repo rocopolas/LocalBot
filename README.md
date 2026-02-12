@@ -205,7 +205,7 @@ This is the fastest way to get started. The `run.sh` script handles environment 
 If you just want to install the package without cloning the repo:
 
 ```bash
-pip install https://github.com/rocopolas/FemtoBot/releases/download/v1.1.2/femtobot-1.0.0-py3-none-any.whl
+pip install https://github.com/rocopolas/FemtoBot/releases/download/v1.1.3/femtobot-1.0.0-py3-none-any.whl
 ```
 
 ---
