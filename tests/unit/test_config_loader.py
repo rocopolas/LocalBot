@@ -64,9 +64,9 @@ class TestConfigDefaults:
     def test_default_model(self):
         """Test default model value."""
         from utils.config_loader import DEFAULT_CONFIG
-        assert DEFAULT_CONFIG["MODEL"] == "llama3.1:8b"
+        assert DEFAULT_CONFIG["MODEL"] == "qwen3:8b"
     
     def test_default_context_limit(self):
         """Test default context limit."""
         from utils.config_loader import DEFAULT_CONFIG
-        assert DEFAULT_CONFIG["CONTEXT_LIMIT"] == 32000
+        assert DEFAULT_CONFIG["CONTEXT_LIMIT"] == 30000

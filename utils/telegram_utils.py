@@ -216,11 +216,23 @@ def split_message(text, limit=4096):
         code_starts = chunk.count('```') % 2
         if code_starts:
             last_code = chunk.rfind('```')
-            if last_code != -1:
+            # If we found a code block start and it's not at the very beginning (or if it is but we can't skip it)
+            if last_code != -1 and last_code > 0:
                 chunk = chunk[:last_code]
                 text = text[last_code:]
             else:
-                text = text[split_index:]
+                # If last_code == 0, it means the entire chunk is inside a code block (or starts with one)
+                # We can't backtrack, so we must close the block and reopen in next chunk
+                # Reduce chunk size to make room for closing ```
+                if len(chunk) > limit - 4:
+                    chunk = chunk[:limit - 4]
+                    # Also update text to consume only what we took
+                    text = text[len(chunk):]
+                else:
+                    text = text[len(chunk):]
+                
+                chunk += "\n```"
+                text = "```\n" + text
         else:
             text = text[split_index:]
             if text.startswith('\n'):

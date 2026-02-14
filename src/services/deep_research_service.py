@@ -56,17 +56,22 @@ class DeepResearchService:
         logger.info(f"Starting Deep Research V2 for chat {chat_id}: {topic[:50]}...")
         
         try:
+            # Detect language
+            language = await self._detect_language(topic)
+            logger.info(f"Detected language for deep research: {language}")
+
             # Create orchestrator
             orchestrator = DeepResearchOrchestrator(
                 llm_client=self.client,
                 model=self.model,
                 max_iterations=self.max_iterations,
                 search_count=self.search_count,
-                status_callback=status_callback
+                status_callback=status_callback,
+                concurrent_tasks=2  # Process 2 tasks at once for speed
             )
             
             # Execute research workflow
-            context = await orchestrator.execute_research(topic, chat_id)
+            context = await orchestrator.execute_research(topic, chat_id, language)
             
             # Generate report using Writer module
             writer = Writer(self.client)
@@ -193,3 +198,25 @@ class DeepResearchService:
         logger.info(f"ODT report saved to: {file_path}")
         
         return file_path
+
+    async def _detect_language(self, text: str) -> str:
+        """
+        Detect the language of the text using LLM.
+        Defaults to 'English' if uncertain.
+        """
+        try:
+            prompt = f"""Analyze the following text and determine its language.
+Text: "{text}"
+
+Respond ONLY with the language name in English (e.g., "English", "Spanish", "French").
+If uncertain, respond with "English".
+"""
+            messages = [{"role": "user", "content": prompt}]
+            language = ""
+            async for chunk in self.client.stream_chat(self.model, messages):
+                language += chunk
+            
+            return language.strip()
+        except Exception as e:
+            logger.error(f"Error detecting language: {e}")
+            return "English"

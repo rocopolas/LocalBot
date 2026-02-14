@@ -62,46 +62,8 @@ NOTIFICATION_CHAT_ID_RAW = os.getenv("NOTIFICATION_CHAT_ID", "")
 NOTIFICATION_CHAT_ID = int(NOTIFICATION_CHAT_ID_RAW) if NOTIFICATION_CHAT_ID_RAW.strip().isdigit() else None
 
 # Setup logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
-
-class TokenRedactFilter(logging.Filter):
-    """Filter to redact sensitive tokens from log messages."""
-    
-    def __init__(self, token=None):
-        super().__init__()
-        self.token = token
-        # Pattern to match bot tokens in URLs
-        self.token_pattern = re.compile(r'bot\d+:[A-Za-z0-9_-]+')
-    
-    def filter(self, record):
-        if hasattr(record, 'msg') and isinstance(record.msg, str):
-            record.msg = self._redact(record.msg)
-        if hasattr(record, 'args') and record.args:
-            record.args = tuple(
-                self._redact(str(arg)) if isinstance(arg, str) else arg
-                for arg in record.args
-            )
-        return True
-    
-    def _redact(self, text):
-        """Redact token from text."""
-        if self.token:
-            text = text.replace(self.token, '***REDACTED***')
-        # Also redact any bot token pattern
-        text = self.token_pattern.sub('bot***REDACTED***', text)
-        return text
-
-
-# Apply token redaction filter to httpx and other loggers
-token_filter = TokenRedactFilter(TOKEN)
-logging.getLogger('httpx').addFilter(token_filter)
-logging.getLogger('httpcore').addFilter(token_filter)
-logging.getLogger('telegram').addFilter(token_filter)
+from utils.logger import setup_logging
+logger = setup_logging(TOKEN)
 
 # Global instances
 chat_manager = ChatManager(max_inactive_hours=24)
@@ -211,12 +173,18 @@ def get_system_prompt():
     return system_instructions if system_instructions else ""
 
 
+def update_activity():
+    """Update last activity timestamp."""
+    global last_activity
+    last_activity = datetime.now()
+
 # Initialize handlers
 command_handlers = CommandHandlers(
     chat_manager=chat_manager,
     is_authorized_func=is_authorized,
     get_system_prompt_func=get_system_prompt,
-    email_digest_job=email_digest_job
+    email_digest_job=email_digest_job,
+    update_activity_func=update_activity
 )
 
 voice_handler = VoiceHandler(

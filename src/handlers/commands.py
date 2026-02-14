@@ -23,12 +23,14 @@ class CommandHandlers:
         chat_manager: ChatManager,
         is_authorized_func,
         get_system_prompt_func,
-        email_digest_job=None
+        email_digest_job=None,
+        update_activity_func=None
     ):
         self.chat_manager = chat_manager
         self.is_authorized = is_authorized_func
         self.get_system_prompt = get_system_prompt_func
         self.email_digest_job = email_digest_job
+        self.update_activity = update_activity_func
     
     @rate_limit(max_messages=5, window_seconds=60)
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -280,6 +282,10 @@ class CommandHandlers:
         
         async def status_callback(msg):
             try:
+                # Update activity to prevent model unloading
+                if self.update_activity:
+                    self.update_activity()
+                    
                 # Append to the existing message or send a new one if it's too long?
                 # For now, just edit the message to show current status
                 await status_msg.edit_text(f"🧠 Deep Research: *{topic}*\n\n{msg}", parse_mode="Markdown")

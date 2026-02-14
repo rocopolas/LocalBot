@@ -111,6 +111,9 @@ Write a professional research report that:
 5. Uses inline citations [1], [2], etc. when referencing specific information
 6. Maintains academic/professional tone
 7. Includes a conclusion that answers the original question
+8. IS WRITTEN IN {context.language.upper()}
+
+IMPORTANT: The entire report MUST be written in {context.language}.
 
 Format in Markdown:
 - # for title

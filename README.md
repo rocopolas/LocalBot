@@ -230,7 +230,7 @@ If you prefer to configure the environment yourself:
 If you just want to install the package without cloning the repo:
 
 ```bash
-pip install https://github.com/rocopolas/FemtoBot/releases/download/v1.1.4/femtobot-1.0.0-py3-none-any.whl
+pip install https://github.com/rocopolas/FemtoBot/releases/download/v1.1.5/femtobot-1.0.0-py3-none-any.whl
 ```
 
 ---
@@ -340,6 +340,7 @@ python src/main.py
 **TUI Commands:**
 ```
 /status         - View token usage and model status
+/deep           - Start deep research
 /new, /clear    - Start new conversation
 /save [name]    - Save current session
 /load [name]    - Load saved session

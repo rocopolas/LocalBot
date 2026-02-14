@@ -12,6 +12,8 @@ class TestOllamaClient:
     @pytest.fixture
     def client(self):
         """Create test client."""
+        # Reset shared client to ensure mocks work
+        OllamaClient._shared_client = None
         return OllamaClient(base_url="http://localhost:11434")
     
     @pytest.mark.asyncio
@@ -36,15 +38,14 @@ class TestOllamaClient:
         ]))
         
         # Create async context manager mock for stream
-        stream_mock = AsyncMock()
-        stream_mock.__aenter__ = AsyncMock(return_value=mock_response)
-        stream_mock.__aexit__ = AsyncMock(return_value=None)
+        stream_context = AsyncMock()
+        stream_context.__aenter__ = AsyncMock(return_value=mock_response)
+        stream_context.__aexit__ = AsyncMock(return_value=None)
         
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = AsyncMock()
-            mock_instance.stream = MagicMock()
-            mock_instance.stream.return_value = stream_mock
-            mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            # Configure the client instance directly
+            mock_instance = mock_client_cls.return_value
+            mock_instance.stream = MagicMock(return_value=stream_context)
             
             chunks = []
             async for chunk in client.stream_chat("test-model", [{"role": "user", "content": "Hi"}]):
@@ -55,10 +56,10 @@ class TestOllamaClient:
     @pytest.mark.asyncio
     async def test_stream_chat_connection_error(self, client):
         """Test handling of connection error."""
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = AsyncMock()
-            mock_instance.stream.side_effect = Exception("Connection refused")
-            mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_instance = mock_client_cls.return_value
+            # Configure stream to raise exception
+            mock_instance.stream = MagicMock(side_effect=Exception("Connection refused"))
             
             chunks = []
             async for chunk in client.stream_chat("test-model", []):
@@ -73,10 +74,10 @@ class TestOllamaClient:
         mock_response.status_code = 200
         mock_response.json.return_value = {"message": {"content": "A cat"}}
         
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = AsyncMock()
-            mock_instance.post.return_value = mock_response
-            mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_instance = mock_client_cls.return_value
+            # Configure post as an async method
+            mock_instance.post = AsyncMock(return_value=mock_response)
             
             result = await client.describe_image("vision-model", "base64data", "Describe this")
             assert result == "A cat"
@@ -84,10 +85,10 @@ class TestOllamaClient:
     @pytest.mark.asyncio
     async def test_unload_model(self, client):
         """Test model unloading."""
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = AsyncMock()
-            mock_instance.post.return_value = MagicMock()
-            mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_instance = mock_client_cls.return_value
+            # Configure post as an async method
+            mock_instance.post = AsyncMock(return_value=MagicMock())
             
             result = await client.unload_model("test-model")
             assert result == True

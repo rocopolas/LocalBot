@@ -30,25 +30,33 @@ class DeepResearchOrchestrator:
         model: str,
         max_iterations: int = 15,
         search_count: int = 5,
-        status_callback: Optional[Callable[[str], Any]] = None
+        status_callback: Optional[Callable[[str], Any]] = None,
+        concurrent_tasks: int = 2
     ):
         self.client = llm_client
         self.model = model
         self.max_iterations = max_iterations
         self.search_count = search_count
         self.status_callback = status_callback
+        self.concurrent_tasks = concurrent_tasks
         
         # Initialize modules
         self.planner = Planner(llm_client)
         self.hunter = Hunter(search_count=search_count)
-        self.reader = Reader(llm_client, min_relevance=0.7)
+        self.reader = Reader(
+            llm_client, 
+            min_relevance=0.7,
+            max_concurrent=5,  # Increased from default for speed
+            fetch_delay=0.5    # Reduced delay
+        )
         self.critic = Critic(llm_client, min_chunks_per_task=2)
         self.writer = Writer(llm_client)
     
     async def execute_research(
         self, 
         question: str, 
-        chat_id: int
+        chat_id: int,
+        language: str = "English"
     ) -> ResearchContext:
         """
         Execute the complete research workflow.
@@ -56,6 +64,7 @@ class DeepResearchOrchestrator:
         Args:
             question: Original research question
             chat_id: Telegram chat ID
+            language: Target language for the report
             
         Returns:
             ResearchContext with all collected data
@@ -65,7 +74,8 @@ class DeepResearchOrchestrator:
         # Initialize context
         context = ResearchContext(
             original_question=question,
-            max_iterations=self.max_iterations
+            max_iterations=self.max_iterations,
+            language=language
         )
         
         # PHASE 1: PLANNING
@@ -86,11 +96,27 @@ class DeepResearchOrchestrator:
                 await self._notify(f"✅ All tasks completed after {context.iteration_count} iterations!")
                 break
             
-            # Process one task at a time (sequential)
-            task = pending_tasks[0]
-            await self._process_task(task, context)
+            # Determine how many tasks to process concurrently
+            # Limit by:
+            # 1. Configured concurrency
+            # 2. Available pending tasks
+            # 3. Remaining iterations allowed
+            remaining_iterations = self.max_iterations - context.iteration_count
+            batch_size = min(self.concurrent_tasks, len(pending_tasks), remaining_iterations)
             
-            context.iteration_count += 1
+            batch = pending_tasks[:batch_size]
+            
+            await self._notify(f"🚀 Processing batch of {len(batch)} tasks concurrently...")
+            
+            # Create coroutines for the batch
+            coroutines = []
+            for task in batch:
+                context.iteration_count += 1
+                coroutines.append(self._process_task(task, context, context.iteration_count))
+            
+            # Execute batch
+            import asyncio
+            await asyncio.gather(*coroutines)
             
             # Notify iteration progress
             await self._notify(f"📊 Progress: {context.iteration_count}/{self.max_iterations} iterations completed")
@@ -112,8 +138,8 @@ class DeepResearchOrchestrator:
                 # Process emergency tasks
                 for task in additional_tasks:
                     if context.iteration_count < self.max_iterations:
-                        await self._process_task(task, context)
                         context.iteration_count += 1
+                        await self._process_task(task, context, context.iteration_count)
         
         # PHASE 4: WRITING
         await self._notify("📝 Phase 4: Synthesizing report...")
@@ -123,10 +149,9 @@ class DeepResearchOrchestrator:
         
         return context
     
-    async def _process_task(self, task: ResearchTask, context: ResearchContext):
+    async def _process_task(self, task: ResearchTask, context: ResearchContext, iteration_number: int):
         """Process a single research task through the full pipeline."""
-        current_iter = context.iteration_count + 1
-        await self._notify(f"🔍 Iteration {current_iter}/{self.max_iterations}: {task.query[:50]}...")
+        await self._notify(f"🔍 Iteration {iteration_number}/{self.max_iterations}: {task.query[:50]}...")
         task.status = TaskStatus.IN_PROGRESS
         
         # Step 1: Hunt for sources

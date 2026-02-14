@@ -65,6 +65,7 @@ class GapAnalysis:
 class ResearchContext:
     """Maintains the complete state of a research session."""
     original_question: str
+    language: str = "English"
     tasks: List[ResearchTask] = field(default_factory=list)
     chunks: List[Chunk] = field(default_factory=list)
     iteration_count: int = 0
@@ -94,6 +95,7 @@ class ResearchContext:
         """Convert context to dictionary for LLM prompts."""
         return {
             "original_question": self.original_question,
+            "language": self.language,
             "total_tasks": len(self.tasks),
             "completed_tasks": len([t for t in self.tasks if t.status == TaskStatus.COMPLETED]),
             "pending_tasks": len(self.get_pending_tasks()),

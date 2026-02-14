@@ -134,6 +134,10 @@ class Reader:
             
             chunks = []
             for chunk_data in chunks_data:
+                # Validate chunk data
+                if not isinstance(chunk_data, dict) or "content" not in chunk_data:
+                    continue
+                    
                 relevance = chunk_data.get("relevance", 0.5)
                 
                 # Only keep highly relevant chunks
